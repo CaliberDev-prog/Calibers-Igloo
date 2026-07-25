@@ -12,6 +12,7 @@ import SettingsPage from './pages/SettingsPage.jsx';
 import HealthPage from './pages/HealthPage.jsx';
 import MessagesPage from './pages/MessagesPage.jsx';
 import ServerPage from './pages/ServerPage.jsx';
+import TerminalPage from './pages/TerminalPage.jsx';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -36,21 +37,22 @@ export default function App() {
     <AuthProvider>
       <ToastProvider>
         <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route index element={<Navigate to="/dashboard" />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="tickets" element={<TicketsPage />} />
-            <Route path="tickets/:ticketId" element={<TicketDetailPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="blacklists" element={<BlacklistsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="health" element={<HealthPage />} />
-            <Route path="messages" element={<MessagesPage />} />
-            <Route path="server" element={<ServerPage />} />
-          </Route>
-        </Routes>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="/dashboard" />} />
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="tickets" element={<TicketsPage />} />
+              <Route path="tickets/:ticketId" element={<TicketDetailPage />} />
+              <Route path="analytics" element={<AnalyticsPage />} />
+              <Route path="blacklists" element={<BlacklistsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="health" element={<HealthPage />} />
+              <Route path="messages" element={<MessagesPage />} />
+              <Route path="server" element={<ServerPage />} />
+              <Route path="terminal" element={<TerminalPage />} />
+            </Route>
+          </Routes>
         </BrowserRouter>
       </ToastProvider>
     </AuthProvider>

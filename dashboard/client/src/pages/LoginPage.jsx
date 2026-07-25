@@ -1,9 +1,13 @@
 import { useAuth } from '../lib/auth.jsx';
+import { useToast } from '../components/Toast.jsx';
+import { useNavigate } from 'react-router-dom';
 import { Snowflake } from 'lucide-react';
 import { useState } from 'react';
 
 export default function LoginPage() {
   const { user, loading, login } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -11,7 +15,7 @@ export default function LoginPage() {
 
   if (loading) return null;
   if (user) {
-    window.location.href = '/dashboard';
+    navigate('/dashboard', { replace: true });
     return null;
   }
 
@@ -21,25 +25,16 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Login failed');
-        setSubmitting(false);
-        return;
+      const data = await login(username, password);
+      if (data.error) {
+        setError(data.error);
+      } else {
+        navigate('/dashboard');
       }
-
-      window.location.href = '/dashboard';
     } catch {
       setError('Connection failed');
-      setSubmitting(false);
     }
+    setSubmitting(false);
   };
 
   return (
@@ -59,7 +54,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2 text-red-400 text-sm">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm animate-fade-in">
               {error}
             </div>
           )}
@@ -69,7 +64,7 @@ export default function LoginPage() {
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full px-4 py-3 bg-dark-800/50 border border-dark-700/50 rounded-xl text-dark-100 placeholder-dark-500 focus:outline-none focus:border-ice-400/50 transition-colors"
+            className="input-dark"
             autoFocus
           />
 
@@ -78,7 +73,8 @@ export default function LoginPage() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 bg-dark-800/50 border border-dark-700/50 rounded-xl text-dark-100 placeholder-dark-500 focus:outline-none focus:border-ice-400/50 transition-colors"
+            onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)}
+            className="input-dark"
           />
 
           <button
@@ -86,7 +82,12 @@ export default function LoginPage() {
             disabled={submitting}
             className="w-full py-3 px-6 bg-gradient-to-r from-ice-400 to-ice-500 hover:from-ice-300 hover:to-ice-400 text-dark-950 rounded-xl font-medium transition-all duration-200 disabled:opacity-50"
           >
-            {submitting ? 'Signing in...' : 'Sign In'}
+            {submitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-dark-950/30 border-t-dark-950 rounded-full animate-spin" />
+                Signing in...
+              </span>
+            ) : 'Sign In'}
           </button>
         </form>
 

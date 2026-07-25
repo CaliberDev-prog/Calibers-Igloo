@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api.js';
+import { useAuth } from '../lib/auth.jsx';
 import { useToast } from '../components/Toast.jsx';
 import {
   ArrowLeft, User, Clock, MessageSquare, Hash, Copy, Check,
-  XCircle, UserPlus, UserMinus, Send, Eye,
+  XCircle, UserPlus, UserMinus, Eye, Pencil,
 } from 'lucide-react';
 
 const DEPTS = {
@@ -13,15 +14,76 @@ const DEPTS = {
   hiring: { name: 'Hiring', emoji: '💼' },
 };
 
+function EditTicketModal({ ticket, onSave, onClose }) {
+  const [departmentId, setDepartmentId] = useState(ticket.departmentId || '');
+  const [claimedBy, setClaimedBy] = useState(ticket.claimedBy || '');
+  const [notes, setNotes] = useState(ticket.notes || '');
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.editTicket(ticket.ticketId, { departmentId, claimedBy, notes });
+      toast('Ticket updated', 'success');
+      onSave();
+    } catch (err) {
+      toast(err.message || 'Failed to update ticket', 'error');
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-dark-950/70 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="glass p-6 max-w-md w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-ice-300/10 flex items-center justify-center">
+            <Pencil className="w-5 h-5 text-ice-300" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-dark-100">Edit Ticket #{String(ticket.ticketId).padStart(4, '0')}</p>
+            <p className="text-xs text-dark-400">Update ticket details</p>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Department</label>
+            <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="input-dark text-sm">
+              {Object.entries(DEPTS).map(([id, d]) => (
+                <option key={id} value={id}>{d.emoji} {d.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Claimed By</label>
+            <input type="text" value={claimedBy} onChange={(e) => setClaimedBy(e.target.value)} className="input-dark text-sm" placeholder="Staff member name" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Notes</label>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="input-dark text-sm min-h-[80px] resize-y" placeholder="Internal notes about this ticket..." />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 pt-2 border-t border-dark-700/30">
+          <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
+          <button onClick={handleSave} disabled={saving} className="btn-primary text-sm disabled:opacity-50">{saving ? 'Saving...' : 'Save Changes'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TicketDetailPage() {
   const { ticketId } = useParams();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const isOwner = user?.role === 'owner';
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [closing, setClosing] = useState(false);
   const [participantId, setParticipantId] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const fetchTicket = async () => {
     try {
@@ -44,11 +106,7 @@ export default function TicketDetailPage() {
   const closeTicket = async () => {
     setClosing(true);
     try {
-      await fetch(`/api/tickets/${ticketId}/close`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      await api.closeTicket(ticketId);
       toast('Ticket closed', 'success');
       fetchTicket();
     } catch {
@@ -61,12 +119,7 @@ export default function TicketDetailPage() {
     if (!participantId.trim()) return;
     setActionLoading(true);
     try {
-      await fetch(`/api/tickets/${ticketId}/participants`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: participantId }),
-      });
+      await api.addParticipant(ticketId, participantId);
       toast('Participant added', 'success');
       setParticipantId('');
       fetchTicket();
@@ -79,10 +132,7 @@ export default function TicketDetailPage() {
   const removeParticipant = async (userId) => {
     setActionLoading(true);
     try {
-      await fetch(`/api/tickets/${ticketId}/participants/${userId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
+      await api.removeParticipant(ticketId, userId);
       toast('Participant removed', 'success');
       fetchTicket();
     } catch {
@@ -102,8 +152,9 @@ export default function TicketDetailPage() {
   if (!ticket) {
     return (
       <div className="text-center py-20">
+        <Ticket className="w-14 h-14 mx-auto mb-4 opacity-20 text-dark-500" />
         <p className="text-dark-500">Ticket not found</p>
-        <Link to="/tickets" className="text-ice-300 text-sm mt-2 inline-block">Back to tickets</Link>
+        <Link to="/tickets" className="text-ice-300 text-sm mt-2 inline-block hover:underline">Back to tickets</Link>
       </div>
     );
   }
@@ -131,25 +182,20 @@ export default function TicketDetailPage() {
           <p className="text-dark-400 text-sm mt-1">{dept?.emoji} {dept?.name || ticket.departmentId}</p>
         </div>
         <div className="flex items-center gap-2">
+          {isOwner && (
+            <button onClick={() => setEditing(true)} className="btn-ghost flex items-center gap-2 text-sm">
+              <Pencil className="w-4 h-4" /> Edit
+            </button>
+          )}
           {ticket.status === 'open' && (
             <button onClick={closeTicket} disabled={closing} className="btn-danger flex items-center gap-2 text-sm disabled:opacity-50">
-              {closing ? (
-                <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
-              ) : (
-                <XCircle className="w-4 h-4" />
-              )}
+              {closing ? <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" /> : <XCircle className="w-4 h-4" />}
               Close Ticket
             </button>
           )}
           {ticket.channelId && (
-            <a
-              href={`https://discord.com/channels/${ticket.guildId || '@me'}/${ticket.channelId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-ghost flex items-center gap-2 text-sm"
-            >
-              <Eye className="w-4 h-4" />
-              View Channel
+            <a href={`https://discord.com/channels/${ticket.guildId || '@me'}/${ticket.channelId}`} target="_blank" rel="noopener noreferrer" className="btn-ghost flex items-center gap-2 text-sm">
+              <Eye className="w-4 h-4" /> View Channel
             </a>
           )}
         </div>
@@ -165,9 +211,7 @@ export default function TicketDetailPage() {
               {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
             </button>
           </div>
-          {ticket.creatorId && (
-            <p className="text-xs text-dark-600 font-mono mt-0.5">{ticket.creatorId}</p>
-          )}
+          {ticket.creatorId && <p className="text-xs text-dark-600 font-mono mt-0.5">{ticket.creatorId}</p>}
         </div>
         <div className="stat-card">
           <Hash className="w-5 h-5 text-ice-300 mb-1" />
@@ -186,6 +230,13 @@ export default function TicketDetailPage() {
           <p className="text-xs text-dark-500">Staff: {ticket.staffMessageCount || 0} · User: {ticket.userMessageCount || 0}</p>
         </div>
       </div>
+
+      {ticket.notes && (
+        <div className="glass p-6 animate-fade-in">
+          <h3 className="text-sm font-semibold text-dark-200 mb-2">Notes</h3>
+          <p className="text-sm text-dark-300 whitespace-pre-wrap">{ticket.notes}</p>
+        </div>
+      )}
 
       {ticket.answers && ticket.answers.length > 0 && (
         <div className="glass p-6 animate-fade-in">
@@ -208,11 +259,7 @@ export default function TicketDetailPage() {
             {ticket.participants.map((p, i) => (
               <span key={i} className="text-xs bg-dark-800/50 border border-dark-700/30 rounded-full px-3 py-1.5 text-dark-300 flex items-center gap-2">
                 {p}
-                <button
-                  onClick={() => removeParticipant(p)}
-                  disabled={actionLoading}
-                  className="text-dark-500 hover:text-red-400 transition-colors"
-                >
+                <button onClick={() => removeParticipant(p)} disabled={actionLoading} className="text-dark-500 hover:text-red-400 transition-colors">
                   <UserMinus className="w-3 h-3" />
                 </button>
               </span>
@@ -230,13 +277,8 @@ export default function TicketDetailPage() {
             placeholder="User ID to add..."
             className="input-dark flex-1 text-sm"
           />
-          <button
-            onClick={addParticipant}
-            disabled={!participantId.trim() || actionLoading}
-            className="btn-primary flex items-center gap-1.5 text-sm disabled:opacity-40"
-          >
-            <UserPlus className="w-4 h-4" />
-            Add
+          <button onClick={addParticipant} disabled={!participantId.trim() || actionLoading} className="btn-primary flex items-center gap-1.5 text-sm disabled:opacity-40">
+            <UserPlus className="w-4 h-4" /> Add
           </button>
         </div>
       </div>
@@ -264,13 +306,15 @@ export default function TicketDetailPage() {
                     <p className="text-xs text-dark-500">{h.oldValue} &rarr; {h.newValue}</p>
                   )}
                 </div>
-                <span className="text-xs text-dark-600 flex-shrink-0">
-                  {new Date(h.timestamp).toLocaleString()}
-                </span>
+                <span className="text-xs text-dark-600 flex-shrink-0">{new Date(h.timestamp).toLocaleString()}</span>
               </div>
             ))}
           </div>
         </div>
+      )}
+
+      {editing && (
+        <EditTicketModal ticket={ticket} onSave={() => { setEditing(false); fetchTicket(); }} onClose={() => setEditing(false)} />
       )}
     </div>
   );

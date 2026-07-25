@@ -3,7 +3,7 @@ import { useAuth } from '../lib/auth.jsx';
 import {
   LayoutDashboard, Ticket, BarChart3, Shield, Settings,
   Activity, LogOut, Snowflake, ChevronLeft, ChevronRight,
-  MessageSquare, Server,
+  MessageSquare, Server, Terminal,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -14,6 +14,7 @@ const NAV = [
   { to: '/server', icon: Server, label: 'Server' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/blacklists', icon: Shield, label: 'Blacklists' },
+  { to: '/terminal', icon: Terminal, label: 'Terminal', ownerOnly: true },
   { to: '/health', icon: Activity, label: 'System' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
@@ -32,6 +33,7 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
 
   const avatarIdx = user ? hashCode(user.username || user.id || '') % 5 : 0;
+  const visibleNav = NAV.filter((n) => !n.ownerOnly || user?.role === 'owner');
 
   return (
     <aside className={`fixed left-0 top-0 h-full ${collapsed ? 'w-[72px]' : 'w-64'} bg-dark-900/80 backdrop-blur-xl border-r border-dark-700/50 flex flex-col z-50 transition-all duration-300`}>
@@ -47,8 +49,8 @@ export default function Sidebar() {
         )}
       </div>
 
-      <nav className="flex-1 p-2 space-y-1">
-        {NAV.map(({ to, icon: Icon, label }) => {
+      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+        {visibleNav.map(({ to, icon: Icon, label }) => {
           const active = location.pathname === to || (to !== '/dashboard' && location.pathname.startsWith(to));
           return (
             <NavLink

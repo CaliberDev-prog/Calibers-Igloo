@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
-import { Activity, Database, Cpu, Clock, RefreshCw, Server, Zap } from 'lucide-react';
+import { Activity, Database, Cpu, Clock, RefreshCw, Server, Zap, Globe } from 'lucide-react';
 
 export default function HealthPage() {
   const [health, setHealth] = useState(null);
@@ -109,13 +109,16 @@ export default function HealthPage() {
           </div>
           <div className="space-y-3">
             {[
-              { label: 'Platform', value: 'Windows' },
-              { label: 'Node.js', value: health?.nodeVersion || 'Unknown' },
-              { label: 'Status', value: health?.status || 'Unknown' },
-              { label: 'Timestamp', value: health?.timestamp ? new Date(health.timestamp).toLocaleString() : 'N/A' },
+              { label: 'Platform', value: `${typeof navigator !== 'undefined' ? navigator.platform : 'Unknown'}`, icon: Globe },
+              { label: 'Node.js', value: health?.nodeVersion || 'Unknown', icon: Zap },
+              { label: 'Status', value: health?.status || 'Unknown', icon: Activity },
+              { label: 'Timestamp', value: health?.timestamp ? new Date(health.timestamp).toLocaleString() : 'N/A', icon: Clock },
             ].map((item) => (
               <div key={item.label} className="flex items-center justify-between py-2 border-b border-dark-700/20 last:border-0">
-                <span className="text-sm text-dark-400">{item.label}</span>
+                <span className="text-sm text-dark-400 flex items-center gap-2">
+                  <item.icon className="w-3.5 h-3.5 text-dark-500" />
+                  {item.label}
+                </span>
                 <span className="text-sm text-dark-200 font-mono">{item.value}</span>
               </div>
             ))}

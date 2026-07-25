@@ -40,4 +40,10 @@ export const api = {
     request(`/messages/${channelId}/${messageId}`, { method: 'DELETE' }),
   sendEmbed: (channelId, embed) =>
     request(`/messages/${channelId}/embed`, { method: 'POST', body: JSON.stringify({ embed }) }),
+  closeTicket: (ticketId) => request(`/tickets/${ticketId}/close`, { method: 'POST' }),
+  editTicket: (ticketId, data) => request(`/tickets/${ticketId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  addParticipant: (ticketId, userId) => request(`/tickets/${ticketId}/participants`, { method: 'POST', body: JSON.stringify({ userId }) }),
+  removeParticipant: (ticketId, userId) => request(`/tickets/${ticketId}/participants/${userId}`, { method: 'DELETE' }),
+  editBlacklist: (id, data) => request(`/blacklists/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  executeCommand: (command, args = []) => request('/commands/execute', { method: 'POST', body: JSON.stringify({ command, args }) }),
 };

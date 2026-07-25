@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
 import { useToast } from '../components/Toast.jsx';
 import {
   Search, Filter, ChevronLeft, ChevronRight, Ticket,
-  ArrowUpDown, ExternalLink, RefreshCw, X, Eye, XCircle,
+  ArrowUpDown, RefreshCw, X, Eye, XCircle,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const DEPTS = {
   general: { name: 'General Support', emoji: '🛟', color: 'text-ice-300' },
@@ -58,11 +58,7 @@ export default function TicketsPage() {
   const closeTicket = async (id) => {
     setClosingId(id);
     try {
-      await fetch(`/api/tickets/${id}/close`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      await api.closeTicket(id);
       toast('Ticket closed', 'success');
       fetchTickets(pagination.page);
     } catch {
@@ -72,7 +68,7 @@ export default function TicketsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-dark-100">Tickets</h1>
@@ -96,28 +92,20 @@ export default function TicketsPage() {
             className="input-dark pl-10 pr-8"
           />
           {search && (
-            <button onClick={() => { setSearch(''); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-500 hover:text-dark-300">
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-500 hover:text-dark-300">
               <X className="w-4 h-4" />
             </button>
           )}
         </div>
 
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="input-dark w-auto min-w-[130px]"
-        >
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="input-dark w-auto min-w-[130px]">
           <option value="all">All Status</option>
           <option value="open">Open</option>
           <option value="closed">Closed</option>
           <option value="deleted">Deleted</option>
         </select>
 
-        <select
-          value={deptFilter}
-          onChange={(e) => setDeptFilter(e.target.value)}
-          className="input-dark w-auto min-w-[150px]"
-        >
+        <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="input-dark w-auto min-w-[150px]">
           <option value="all">All Departments</option>
           {Object.entries(DEPTS).map(([id, d]) => (
             <option key={id} value={id}>{d.emoji} {d.name}</option>
@@ -125,7 +113,7 @@ export default function TicketsPage() {
         </select>
       </div>
 
-      <div className="glass overflow-hidden animate-fade-in">
+      <div className="glass overflow-hidden">
         <div className="grid grid-cols-[80px_110px_1fr_120px_120px_140px] gap-4 px-4 py-3 border-b border-dark-700/50 text-xs font-medium text-dark-500 uppercase tracking-wider">
           <button onClick={() => toggleSort('ticketId')} className="flex items-center gap-1 hover:text-dark-300">
             ID <ArrowUpDown className="w-3 h-3" />
@@ -174,18 +162,11 @@ export default function TicketsPage() {
                       <span className="text-sm text-dark-300 truncate">{dept?.name || t.departmentId}</span>
                     </div>
                     <p className="text-xs text-dark-500 truncate">{t.creatorTag || t.creatorId}</p>
-                    {t.creatorId && (
-                      <p className="text-xs text-dark-600 font-mono truncate">{t.creatorId}</p>
-                    )}
                   </div>
                   <span className="text-xs text-dark-500">{new Date(t.createdAt).toLocaleDateString()}</span>
                   <span className="text-xs text-dark-500">{t.closedAt ? new Date(t.closedAt).toLocaleDateString() : '-'}</span>
                   <div className="flex items-center gap-2 justify-end">
-                    <Link
-                      to={`/tickets/${t.ticketId}`}
-                      className="btn-ghost p-1.5 text-dark-400 hover:text-ice-300"
-                      title="View ticket"
-                    >
+                    <Link to={`/tickets/${t.ticketId}`} className="btn-ghost p-1.5 text-dark-400 hover:text-ice-300" title="View ticket">
                       <Eye className="w-4 h-4" />
                     </Link>
                     {t.status === 'open' && (
@@ -211,15 +192,9 @@ export default function TicketsPage() {
 
         {pagination.pages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-dark-700/50">
-            <p className="text-xs text-dark-500">
-              Page {pagination.page} of {pagination.pages}
-            </p>
+            <p className="text-xs text-dark-500">Page {pagination.page} of {pagination.pages}</p>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => fetchTickets(pagination.page - 1)}
-                disabled={pagination.page <= 1}
-                className="btn-ghost p-2 disabled:opacity-30"
-              >
+              <button onClick={() => fetchTickets(pagination.page - 1)} disabled={pagination.page <= 1} className="btn-ghost p-2 disabled:opacity-30">
                 <ChevronLeft className="w-4 h-4" />
               </button>
               {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
@@ -235,11 +210,7 @@ export default function TicketsPage() {
                   </button>
                 );
               })}
-              <button
-                onClick={() => fetchTickets(pagination.page + 1)}
-                disabled={pagination.page >= pagination.pages}
-                className="btn-ghost p-2 disabled:opacity-30"
-              >
+              <button onClick={() => fetchTickets(pagination.page + 1)} disabled={pagination.page >= pagination.pages} className="btn-ghost p-2 disabled:opacity-30">
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>

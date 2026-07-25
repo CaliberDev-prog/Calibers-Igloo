@@ -291,6 +291,78 @@ router.post('/messages/:channelId/embed', requireStaff, async (req, res) => {
   }
 });
 
+router.patch('/tickets/:ticketId', requireOwner, async (req, res) => {
+  try {
+    const { departmentId, notes, claimedBy } = req.body;
+    const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) });
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+    if (departmentId !== undefined) ticket.departmentId = departmentId;
+    if (notes !== undefined) ticket.notes = notes;
+    if (claimedBy !== undefined) ticket.claimedBy = claimedBy;
+    await ticket.save();
+    res.json({ ticket });
+  } catch (err) {
+    console.error('[API] Edit ticket error:', err);
+    res.status(500).json({ error: 'Failed to edit ticket' });
+  }
+});
+
+router.post('/tickets/:ticketId/participants', requireStaff, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId is required' });
+    const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) });
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+    if (!ticket.participants) ticket.participants = [];
+    if (!ticket.participants.includes(userId)) ticket.participants.push(userId);
+    await ticket.save();
+    res.json({ ticket });
+  } catch (err) {
+    console.error('[API] Add participant error:', err);
+    res.status(500).json({ error: 'Failed to add participant' });
+  }
+});
+
+router.delete('/tickets/:ticketId/participants/:userId', requireStaff, async (req, res) => {
+  try {
+    const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) });
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+    ticket.participants = (ticket.participants || []).filter(u => u !== req.params.userId);
+    await ticket.save();
+    res.json({ ticket });
+  } catch (err) {
+    console.error('[API] Remove participant error:', err);
+    res.status(500).json({ error: 'Failed to remove participant' });
+  }
+});
+
+router.patch('/blacklists/:id', requireOwner, async (req, res) => {
+  try {
+    const { reason, departmentId } = req.body;
+    const entry = await TicketBlacklist.findById(req.params.id);
+    if (!entry) return res.status(404).json({ error: 'Blacklist entry not found' });
+    if (reason !== undefined) entry.reason = reason;
+    if (departmentId !== undefined) entry.departmentId = departmentId;
+    await entry.save();
+    res.json({ entry });
+  } catch (err) {
+    console.error('[API] Edit blacklist error:', err);
+    res.status(500).json({ error: 'Failed to edit blacklist entry' });
+  }
+});
+
+router.post('/commands/execute', requireOwner, async (req, res) => {
+  try {
+    const { command, args } = req.body;
+    if (!command) return res.status(400).json({ error: 'command is required' });
+    const output = 'Command executed: ' + command + ' ' + (args || []).join(' ');
+    res.json({ success: true, output });
+  } catch (err) {
+    console.error('[API] Execute command error:', err);
+    res.status(500).json({ error: 'Failed to execute command' });
+  }
+});
+
 router.get('/health', (req, res) => {
   const dbState = mongoose.connection.readyState;
   res.json({
