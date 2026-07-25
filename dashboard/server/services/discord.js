@@ -81,3 +81,21 @@ export async function getMember(userId) {
     return null;
   }
 }
+
+export async function deleteChannel(channelId) {
+  await discordMethod('DELETE', `/channels/${channelId}`);
+  return { success: true };
+}
+
+export async function editChannel(channelId, data) {
+  return discordMethod('PATCH', `/channels/${channelId}`, data);
+}
+
+export async function editRole(roleId, data) {
+  return discordMethod('PATCH', `/guilds/${GUILD_ID}/roles/${roleId}`, data);
+}
+
+export async function deleteRole(roleId) {
+  await discordMethod('DELETE', `/guilds/${GUILD_ID}/roles/${roleId}`);
+  return { success: true };
+}

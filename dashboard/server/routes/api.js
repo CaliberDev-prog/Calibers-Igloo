@@ -8,6 +8,7 @@ const router = Router();
 const Ticket = mongoose.model('Ticket', new mongoose.Schema({}, { strict: false }));
 const TicketBlacklist = mongoose.model('TicketBlacklist', new mongoose.Schema({}, { strict: false }));
 const Counter = mongoose.model('Counter', new mongoose.Schema({}, { strict: false }));
+const BotConfig = mongoose.model('BotConfig', new mongoose.Schema({}, { strict: false }));
 
 router.use(authenticate);
 
@@ -51,6 +52,31 @@ router.get('/overview', requireStaff, async (req, res) => {
   }
 });
 
+router.get('/config', requireStaff, async (req, res) => {
+  try {
+    const config = await BotConfig.findOne({ type: 'settings' }).lean();
+    res.json({ settings: config?.settings || {} });
+  } catch (err) {
+    console.error('[API] Config error:', err);
+    res.json({ settings: {} });
+  }
+});
+
+router.post('/config', requireOwner, async (req, res) => {
+  try {
+    const { settings } = req.body;
+    await BotConfig.findOneAndUpdate(
+      { type: 'settings' },
+      { $set: { settings, updatedAt: new Date() } },
+      { upsert: true }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[API] Config save error:', err);
+    res.status(500).json({ error: 'Failed to save config' });
+  }
+});
+
 router.get('/channels', requireStaff, async (req, res) => {
   try {
     const channels = await discord.getChannels();
@@ -60,12 +86,49 @@ router.get('/channels', requireStaff, async (req, res) => {
   }
 });
 
+router.patch('/channels/:channelId', requireOwner, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || typeof name !== 'string') return res.status(400).json({ error: 'Invalid channel name' });
+    const updated = await discord.editChannel(req.params.channelId, { name });
+    res.json({ channel: updated });
+  } catch (err) {
+    console.error('[API] Edit channel error:', err);
+    res.status(500).json({ error: 'Failed to edit channel' });
+  }
+});
+
 router.get('/roles', requireStaff, async (req, res) => {
   try {
     const roles = await discord.getRoles();
     res.json({ roles });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch roles' });
+  }
+});
+
+router.patch('/roles/:roleId', requireOwner, async (req, res) => {
+  try {
+    const { name, color } = req.body;
+    const data = {};
+    if (name && typeof name === 'string') data.name = name;
+    if (color !== undefined) data.color = typeof color === 'number' ? color : parseInt(String(color).replace('#', ''), 16);
+    if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No fields to update' });
+    const updated = await discord.editRole(req.params.roleId, data);
+    res.json({ role: updated });
+  } catch (err) {
+    console.error('[API] Edit role error:', err);
+    res.status(500).json({ error: 'Failed to edit role' });
+  }
+});
+
+router.delete('/roles/:roleId', requireOwner, async (req, res) => {
+  try {
+    await discord.deleteRole(req.params.roleId);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[API] Delete role error:', err);
+    res.status(500).json({ error: 'Failed to delete role' });
   }
 });
 
@@ -92,34 +155,6 @@ router.get('/tickets', requireStaff, async (req, res) => {
   } catch (err) {
     console.error('[API] Tickets error:', err);
     res.status(500).json({ error: 'Failed to fetch tickets' });
-  }
-});
-
-router.get('/tickets/:ticketId', requireStaff, async (req, res) => {
-  try {
-    const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) }).lean();
-    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
-    res.json({ ticket });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch ticket' });
-  }
-});
-
-router.post('/tickets/:ticketId/close', requireStaff, async (req, res) => {
-  try {
-    const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) });
-    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
-    if (ticket.status !== 'open') return res.status(400).json({ error: 'Ticket is not open' });
-    if (ticket.channelId) {
-      try { await discord.deleteChannel(ticket.channelId); } catch {}
-    }
-    ticket.status = 'closed';
-    ticket.closedAt = new Date();
-    ticket.closedBy = req.user.username;
-    await ticket.save();
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to close ticket' });
   }
 });
 
@@ -150,6 +185,34 @@ router.get('/tickets/stats/overview', requireStaff, async (req, res) => {
     res.json({ total, open, closed, deleted, byDepartment: byDept, last7Days, avgDuration: avgDuration[0]?.avg || 0, topUsers });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+router.get('/tickets/:ticketId', requireStaff, async (req, res) => {
+  try {
+    const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) }).lean();
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+    res.json({ ticket });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch ticket' });
+  }
+});
+
+router.post('/tickets/:ticketId/close', requireStaff, async (req, res) => {
+  try {
+    const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) });
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+    if (ticket.status !== 'open') return res.status(400).json({ error: 'Ticket is not open' });
+    if (ticket.channelId) {
+      try { await discord.deleteChannel(ticket.channelId); } catch {}
+    }
+    ticket.status = 'closed';
+    ticket.closedAt = new Date();
+    ticket.closedBy = req.user.username;
+    await ticket.save();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to close ticket' });
   }
 });
 

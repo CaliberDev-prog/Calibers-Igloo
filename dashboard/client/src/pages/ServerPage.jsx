@@ -1,39 +1,24 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
+import { useAuth } from '../lib/auth.jsx';
 import { useToast } from '../components/Toast.jsx';
 import {
   Hash, Volume2, Megaphone, Server, Users, Copy, Check,
-  RefreshCw, MessageSquare, Shield, Palette, Eye, BarChart3,
-  ChevronRight, Folder, Lock, Tag, Mic, Radio,
+  RefreshCw, MessageSquare, Shield, Eye, Folder, Lock,
+  Pencil, Trash2, AlertTriangle,
 } from 'lucide-react';
+import ColorWheel from '../components/ColorWheel.jsx';
 
-const CHANNEL_ICONS = {
-  0: Hash,
-  2: Volume2,
-  4: Megaphone,
-  5: Megaphone,
-  13: Radio,
-  15: Lock,
-};
-
-const CHANNEL_TYPE_NAMES = {
-  0: 'Text',
-  2: 'Voice',
-  4: 'Announcement',
-  5: 'Stage',
-  13: 'Forum',
-  15: 'Channel',
-};
+const CHANNEL_ICONS = { 0: Hash, 2: Volume2, 4: Megaphone, 5: Megaphone, 13: Radio, 15: Lock };
+const CHANNEL_TYPE_NAMES = { 0: 'Text', 2: 'Voice', 4: 'Announcement', 5: 'Stage', 13: 'Forum', 15: 'Channel' };
 
 function CopyId({ id }) {
   const [copied, setCopied] = useState(false);
-
   const copy = () => {
     navigator.clipboard.writeText(id);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
-
   return (
     <button onClick={copy} className="text-dark-600 hover:text-dark-400 transition-colors" title="Copy ID">
       {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -41,13 +26,174 @@ function CopyId({ id }) {
   );
 }
 
-export default function ServerPage() {
+function roleColorHex(color) {
+  if (!color || color === 0) return '#4b5563';
+  return `#${color.toString(16).padStart(6, '0')}`;
+}
+
+function EditRoleModal({ role, onSave, onClose }) {
+  const [name, setName] = useState(role.name);
+  const [hexColor, setHexColor] = useState(roleColorHex(role.color));
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+
+  const handleSave = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      await api.editRole(role.id, { name: name.trim(), color: hexColor });
+      toast('Role updated', 'success');
+      onSave();
+    } catch (err) {
+      toast(err.message || 'Failed to update role', 'error');
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-dark-950/70 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="glass p-6 max-w-md w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-ice-300/10 flex items-center justify-center">
+            <Shield className="w-5 h-5 text-ice-300" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-dark-100">Edit Role</p>
+            <p className="text-xs text-dark-400">Rename or change color</p>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Role Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="input-dark text-sm"
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+            />
+          </div>
+          <ColorWheel value={hexColor} onChange={setHexColor} label="Role Color" />
+        </div>
+        <div className="flex justify-end gap-2 pt-2 border-t border-dark-700/30">
+          <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
+          <button onClick={handleSave} disabled={saving || !name.trim()} className="btn-primary text-sm disabled:opacity-50">
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditChannelModal({ channel, onSave, onClose }) {
+  const [name, setName] = useState(channel.name);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+
+  const handleSave = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      await api.editChannel(channel.id, { name: name.trim() });
+      toast('Channel renamed', 'success');
+      onSave();
+    } catch (err) {
+      toast(err.message || 'Failed to rename channel', 'error');
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-dark-950/70 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="glass p-6 max-w-sm w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-ice-300/10 flex items-center justify-center">
+            <Hash className="w-5 h-5 text-ice-300" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-dark-100">Rename Channel</p>
+            <p className="text-xs text-dark-400">#{channel.name}</p>
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Channel Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="input-dark text-sm"
+            autoFocus
+            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+          />
+        </div>
+        <div className="flex justify-end gap-2 pt-2 border-t border-dark-700/30">
+          <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
+          <button onClick={handleSave} disabled={saving || !name.trim()} className="btn-primary text-sm disabled:opacity-50">
+            {saving ? 'Renaming...' : 'Rename'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteRoleModal({ role, onSave, onClose }) {
+  const [deleting, setDeleting] = useState(false);
+  const { toast } = useToast();
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.deleteRole(role.id);
+      toast('Role deleted', 'success');
+      onSave();
+    } catch (err) {
+      toast(err.message || 'Failed to delete role', 'error');
+    }
+    setDeleting(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-dark-950/70 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="glass p-6 max-w-sm w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+            <AlertTriangle className="w-5 h-5 text-red-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-dark-100">Delete Role</p>
+            <p className="text-xs text-dark-400">This cannot be undone</p>
+          </div>
+        </div>
+        <p className="text-xs text-dark-400 bg-dark-900/50 rounded-xl p-3 border border-dark-700/30">
+          Are you sure you want to delete <strong className="text-dark-200">{role.name}</strong>?
+          Members with this role will lose its permissions.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
+          <button onClick={handleDelete} disabled={deleting} className="btn-danger text-sm disabled:opacity-50">
+            {deleting ? 'Deleting...' : 'Delete Role'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ServerPage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const isOwner = user?.role === 'owner';
   const [guild, setGuild] = useState(null);
   const [channels, setChannels] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('channels');
+  const [editingRole, setEditingRole] = useState(null);
+  const [deletingRole, setDeletingRole] = useState(null);
+  const [editingChannel, setEditingChannel] = useState(null);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -103,7 +249,7 @@ export default function ServerPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-dark-100">Server Explorer</h1>
-          <p className="text-dark-400 text-sm mt-1">Browse channels, roles, and server info</p>
+          <p className="text-dark-400 text-sm mt-1">Browse and manage channels & roles</p>
         </div>
         <button onClick={fetchAll} className="btn-ghost flex items-center gap-2 text-sm">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -192,6 +338,15 @@ export default function ServerPage() {
                                 <span className="text-[10px] text-dark-600 bg-dark-800/50 px-2 py-0.5 rounded-full">
                                   {CHANNEL_TYPE_NAMES[ch.type] || 'Unknown'}
                                 </span>
+                                {isOwner && ch.type !== 4 && (
+                                  <button
+                                    onClick={() => setEditingChannel(ch)}
+                                    className="text-dark-600 hover:text-ice-300 transition-colors opacity-0 group-hover:opacity-100"
+                                    title="Rename channel"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                                 <CopyId id={ch.id} />
                               </div>
                             );
@@ -210,6 +365,7 @@ export default function ServerPage() {
                 <span className="text-xs font-semibold text-dark-400 uppercase tracking-wider">
                   {sortedRoles.length} role(s)
                 </span>
+                {isOwner && <span className="text-[10px] text-dark-600">Click pencil to edit</span>}
               </div>
               {sortedRoles.length === 0 ? (
                 <div className="p-12 text-center text-dark-500">
@@ -219,24 +375,42 @@ export default function ServerPage() {
               ) : (
                 <div className="divide-y divide-dark-700/20">
                   {sortedRoles.map((role) => (
-                    <div key={role.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-dark-700/15 transition-colors">
+                    <div key={role.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-dark-700/15 transition-colors group">
                       <div
                         className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: role.color ? `#${role.color.toString(16).padStart(6, '0')}` : '#4b5563' }}
+                        style={{ backgroundColor: roleColorHex(role.color) }}
                       />
                       <span className="text-sm text-dark-200 flex-1">{role.name}</span>
                       {role.color ? (
                         <span
                           className="text-[10px] font-mono px-2 py-0.5 rounded-full"
                           style={{
-                            backgroundColor: `${role.color ? `#${role.color.toString(16).padStart(6, '0')}` : '#4b5563'}15`,
-                            color: `#${role.color.toString(16).padStart(6, '0')}`,
-                            border: `1px solid ${role.color ? `#${role.color.toString(16).padStart(6, '0')}` : '#4b5563'}30`,
+                            backgroundColor: `${roleColorHex(role.color)}15`,
+                            color: roleColorHex(role.color),
+                            border: `1px solid ${roleColorHex(role.color)}30`,
                           }}
                         >
-                          #{role.color.toString(16).padStart(6, '0')}
+                          {roleColorHex(role.color)}
                         </span>
                       ) : null}
+                      {isOwner && (
+                        <>
+                          <button
+                            onClick={() => setEditingRole(role)}
+                            className="text-dark-600 hover:text-ice-300 transition-colors opacity-0 group-hover:opacity-100"
+                            title="Edit role"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setDeletingRole(role)}
+                            className="text-dark-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                            title="Delete role"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
                       <CopyId id={role.id} />
                     </div>
                   ))}
@@ -321,6 +495,28 @@ export default function ServerPage() {
             </div>
           )}
         </>
+      )}
+
+      {editingRole && (
+        <EditRoleModal
+          role={editingRole}
+          onSave={() => { setEditingRole(null); fetchAll(); }}
+          onClose={() => setEditingRole(null)}
+        />
+      )}
+      {deletingRole && (
+        <DeleteRoleModal
+          role={deletingRole}
+          onSave={() => { setDeletingRole(null); fetchAll(); }}
+          onClose={() => setDeletingRole(null)}
+        />
+      )}
+      {editingChannel && (
+        <EditChannelModal
+          channel={editingChannel}
+          onSave={() => { setEditingChannel(null); fetchAll(); }}
+          onClose={() => setEditingChannel(null)}
+        />
       )}
     </div>
   );

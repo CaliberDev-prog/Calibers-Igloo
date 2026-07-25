@@ -18,10 +18,20 @@ const NAV = [
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
+function hashCode(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash);
+}
+
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+
+  const avatarIdx = user ? hashCode(user.username || user.id || '') % 5 : 0;
 
   return (
     <aside className={`fixed left-0 top-0 h-full ${collapsed ? 'w-[72px]' : 'w-64'} bg-dark-900/80 backdrop-blur-xl border-r border-dark-700/50 flex flex-col z-50 transition-all duration-300`}>
@@ -72,14 +82,14 @@ export default function Sidebar() {
         {user && (
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} p-2 rounded-xl bg-dark-800/30`}>
             <img
-              src={user.avatar ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png` : `https://cdn.discordapp.com/embed/avatars/${parseInt(user.discriminator || user.id) % 5}.png`}
+              src={`https://cdn.discordapp.com/embed/avatars/${avatarIdx}.png`}
               alt=""
               className="w-8 h-8 rounded-full flex-shrink-0"
             />
             {!collapsed && (
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-dark-200 truncate">{user.username}</p>
-                <p className="text-xs text-dark-500">{user.id === process.env.REACT_OWNER_ID ? 'Owner' : 'Staff'}</p>
+                <p className="text-xs text-dark-500">{user.role === 'owner' ? 'Owner' : 'Staff'}</p>
               </div>
             )}
             {!collapsed && (

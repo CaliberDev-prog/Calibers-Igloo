@@ -24,8 +24,12 @@ export const api = {
   deleteBlacklist: (id) => request(`/blacklists/${id}`, { method: 'DELETE' }),
   getHealth: () => request('/health'),
   getConfig: () => request('/config'),
+  saveConfig: (settings) => request('/config', { method: 'POST', body: JSON.stringify({ settings }) }),
   getChannels: () => request('/channels'),
+  editChannel: (channelId, data) => request(`/channels/${channelId}`, { method: 'PATCH', body: JSON.stringify(data) }),
   getRoles: () => request('/roles'),
+  editRole: (roleId, data) => request(`/roles/${roleId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteRole: (roleId) => request(`/roles/${roleId}`, { method: 'DELETE' }),
   getMessages: (channelId, limit = 50, before) =>
     request(`/messages/${channelId}?limit=${limit}${before ? `&before=${before}` : ''}`),
   sendMessage: (channelId, content, embed) =>

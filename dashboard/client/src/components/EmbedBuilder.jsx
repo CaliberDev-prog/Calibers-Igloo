@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, Plus, Trash2, Palette } from 'lucide-react';
+import ColorWheel from './ColorWheel.jsx';
 
 const EMPTY_FIELD = { name: '', value: '', inline: false };
 
@@ -18,6 +19,7 @@ export default function EmbedBuilder({ onSend, onClose }) {
   const [image, setImage] = useState('');
   const [thumbnail, setThumbnail] = useState('');
   const [fields, setFields] = useState([]);
+  const [showColorPicker, setShowColorPicker] = useState(false);
 
   const updateField = (i, key, val) => {
     setFields((prev) => prev.map((f, idx) => (idx === i ? { ...f, [key]: val } : f)));
@@ -78,23 +80,20 @@ export default function EmbedBuilder({ onSend, onClose }) {
             placeholder="Description (supports markdown)"
             className="input-dark text-sm min-h-[100px] resize-y"
           />
-          <div className="flex gap-3">
-            <div className="flex-1 relative">
-              <Palette className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500" />
-              <input
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="absolute left-10 top-1/2 -translate-y-1/2 w-6 h-6 rounded cursor-pointer border-0 bg-transparent"
-              />
-              <input
-                type="text"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                placeholder="#75cff5"
-                className="input-dark text-sm pl-20"
-              />
-            </div>
+          <div className="relative">
+            <button
+              onClick={() => setShowColorPicker(!showColorPicker)}
+              className="input-dark text-sm flex items-center gap-3 cursor-pointer text-left"
+            >
+              <div className="w-6 h-6 rounded-md border border-dark-700/50 flex-shrink-0" style={{ backgroundColor: color }} />
+              <Palette className="w-4 h-4 text-dark-500" />
+              <span className="font-mono text-xs">{color}</span>
+            </button>
+            {showColorPicker && (
+              <div className="absolute z-30 mt-2 p-3 glass border border-dark-700/50" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+                <ColorWheel value={color} onChange={setColor} />
+              </div>
+            )}
           </div>
           <input
             type="text"

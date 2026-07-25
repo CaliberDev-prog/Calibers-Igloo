@@ -1,6 +1,11 @@
 import { useMemo } from 'react';
 import { ChevronDown } from 'lucide-react';
 
+function roleColorHex(color) {
+  if (!color || color === 0) return '#4b5563';
+  return `#${color.toString(16).padStart(6, '0')}`;
+}
+
 export default function RoleSelector({ roles = [], value, onChange, label }) {
   const sorted = useMemo(
     () => [...roles].sort((a, b) => (b.position || 0) - (a.position || 0)),
@@ -32,7 +37,7 @@ export default function RoleSelector({ roles = [], value, onChange, label }) {
           <div className="flex items-center gap-2 mt-1">
             <span
               className="w-3 h-3 rounded-full flex-shrink-0"
-              style={{ backgroundColor: selected.color || '#99aab5' }}
+              style={{ backgroundColor: roleColorHex(selected.color) }}
             />
             <span className="text-xs text-dark-400">{selected.name}</span>
           </div>

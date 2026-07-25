@@ -77,7 +77,7 @@ const SECTIONS = [
 export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const isOwner = user?.id === '1293164546005012512';
+  const isOwner = user?.role === 'owner';
   const [activeSection, setActiveSection] = useState('tickets');
   const [settings, setSettings] = useState({});
   const [channels, setChannels] = useState([]);
@@ -109,12 +109,7 @@ export default function SettingsPage() {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      await fetch('/api/settings', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings }),
-      });
+      await api.saveConfig(settings);
       toast('Settings saved successfully!', 'success');
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
