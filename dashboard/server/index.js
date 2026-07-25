@@ -15,6 +15,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3001;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const IS_PROD = process.env.NODE_ENV === 'production';
