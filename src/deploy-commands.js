@@ -5,6 +5,7 @@ import { data as ping } from './commands/ping.js';
 import { commands as ticketCommands } from './commands/tickets/ticket.js';
 import { commands as panelCommands } from './commands/slash/panels.js';
 import { commands as modCommands } from './commands/slash/moderation.js';
+import * as staffadd from './commands/staffadd.js';
 
 const required = ['DISCORD_TOKEN', 'CLIENT_ID', 'GUILD_ID'];
 const missing = required.filter((key) => !process.env[key]);
@@ -14,6 +15,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 const all = [
   setup.toJSON(),
   ping.toJSON(),
+  staffadd.data.toJSON(),
   ...ticketCommands.map((c) => c.data.toJSON()),
   ...panelCommands.map((c) => c.data.toJSON()),
   ...modCommands.map((c) => c.data.toJSON()),

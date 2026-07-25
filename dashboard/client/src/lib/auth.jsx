@@ -18,7 +18,19 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = () => { window.location.href = '/api/auth/login'; };
+  const login = (username, password) => {
+    return fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ username, password }),
+    }).then(async (res) => {
+      const data = await res.json();
+      if (res.ok) setUser(data.user);
+      return data;
+    });
+  };
+
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     setUser(null);

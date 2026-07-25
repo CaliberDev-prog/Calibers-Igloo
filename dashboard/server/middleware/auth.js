@@ -1,8 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'calibers-igloo-dashboard-jwt-secret';
-const OWNER_ID = process.env.DISCORD_OWNER_ID || '1293164546005012512';
-const STAFF_ROLES = ['1530531573332447324', '1530531568605597718'];
+const OWNER_ID = process.env.OWNER_ID || '1293164546005012512';
 
 export function authenticate(req, res, next) {
   const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
@@ -23,9 +22,8 @@ export function requireOwner(req, res, next) {
 }
 
 export function requireStaff(req, res, next) {
-  if (req.user.id === OWNER_ID) return next();
-  const hasRole = req.user.roles?.some(r => STAFF_ROLES.includes(r));
-  if (!hasRole) return res.status(403).json({ error: 'Staff only' });
+  if (req.user.role === 'owner') return next();
+  if (req.user.role !== 'staff') return res.status(403).json({ error: 'Staff only' });
   next();
 }
 
@@ -33,8 +31,6 @@ export function generateToken(user) {
   return jwt.sign({
     id: user.id,
     username: user.username,
-    discriminator: user.discriminator,
-    avatar: user.avatar,
-    roles: user.roles || [],
+    role: user.role,
   }, JWT_SECRET, { expiresIn: '7d' });
 }

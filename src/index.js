@@ -27,6 +27,7 @@ import { ticketConfig } from './config/tickets.js';
 import { setClient } from './services/ownerNotify.js';
 import { getPrefix } from './services/prefixService.js';
 import { handlePurgeCommand, handleWarningCommand, handleSlowmodeCommand } from './commands/prefix/moderation.js';
+import * as staffaddCommand from './commands/staffadd.js';
 
 if (!process.env.DISCORD_TOKEN) {
   throw new Error('Missing DISCORD_TOKEN in .env');
@@ -59,6 +60,7 @@ for (const cmd of panelSlashCommands) {
 for (const cmd of modSlashCommands) {
   client.commands.set(cmd.data.name, cmd);
 }
+client.commands.set(staffaddCommand.data.name, staffaddCommand);
 
 client.once(Events.ClientReady, async (readyClient) => {
   console.log(`Logged in as ${readyClient.user.tag}`);

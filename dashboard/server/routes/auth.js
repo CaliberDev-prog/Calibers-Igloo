@@ -1,75 +1,34 @@
 import { Router } from 'express';
-import jwt from 'jsonwebtoken';
-import fetch from 'node-fetch';
+import DashboardUser from '../models/DashboardUser.js';
 import { generateToken } from '../middleware/auth.js';
 
 const router = Router();
 
-const DISCORD_API = 'https://discord.com/api/v10';
-const SCOPES = ['identify', 'guilds', 'guilds.members.read'];
+const OWNER_ID = process.env.OWNER_ID || '1293164546005012512';
 
-router.get('/login', (req, res) => {
-  const params = new URLSearchParams({
-    client_id: process.env.DISCORD_CLIENT_ID,
-    redirect_uri: process.env.DISCORD_REDIRECT_URI,
-    response_type: 'code',
-    scope: SCOPES.join(' '),
-  });
-  res.redirect(`https://discord.com/oauth2/authorize?${params}`);
-});
-
-router.get('/callback', async (req, res) => {
-  const { code } = req.query;
-  if (!code) return res.redirect(`${process.env.CLIENT_URL}/login?error=no_code`);
+router.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password required' });
+  }
 
   try {
-    const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: process.env.DISCORD_CLIENT_ID,
-        client_secret: process.env.DISCORD_CLIENT_SECRET,
-        code,
-        grant_type: 'authorization_code',
-        redirect_uri: process.env.DISCORD_REDIRECT_URI,
-        scope: SCOPES.join(' '),
-      }),
-    });
-    const tokens = await tokenRes.json();
-    if (tokens.error) throw new Error(tokens.error_description);
-
-    const userRes = await fetch(`${DISCORD_API}/users/@me`, {
-      headers: { Authorization: `Bearer ${tokens.access_token}` },
-    });
-    const user = await userRes.json();
-
-    const guildsRes = await fetch(`${DISCORD_API}/users/@me/guilds`, {
-      headers: { Authorization: `Bearer ${tokens.access_token}` },
-    });
-    const guilds = await guildsRes.json();
-
-    const targetGuild = guilds.find(g => g.id === process.env.DISCORD_GUILD_ID);
-    if (!targetGuild) return res.redirect(`${process.env.CLIENT_URL}/login?error=no_access`);
-
-    const botToken = process.env.DISCORD_BOT_TOKEN;
-    let member = null;
-    if (botToken) {
-      const memberRes = await fetch(
-        `${DISCORD_API}/guilds/${process.env.DISCORD_GUILD_ID}/members/${user.id}`,
-        { headers: { Authorization: `Bot ${botToken}` } }
-      );
-      if (memberRes.ok) member = await memberRes.json();
+    const user = await DashboardUser.findOne({ username: username.toLowerCase() });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    const userData = {
-      id: user.id,
-      username: user.username,
-      discriminator: user.discriminator || '0',
-      avatar: user.avatar,
-      roles: member?.roles || [],
-    };
+    const valid = await user.checkPassword(password);
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
 
-    const token = generateToken(userData);
+    const token = generateToken({
+      id: user.userId,
+      username: user.username,
+      role: user.userId === OWNER_ID ? 'owner' : user.role,
+    });
+
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -77,10 +36,13 @@ router.get('/callback', async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.redirect(`${process.env.CLIENT_URL}/dashboard`);
+    res.json({
+      success: true,
+      user: { id: user.userId, username: user.username, role: user.userId === OWNER_ID ? 'owner' : user.role },
+    });
   } catch (err) {
-    console.error('[AUTH] Callback error:', err);
-    res.redirect(`${process.env.CLIENT_URL}/login?error=auth_failed`);
+    console.error('[AUTH] Login error:', err);
+    res.status(500).json({ error: 'Internal error' });
   }
 });
 
@@ -89,7 +51,8 @@ router.get('/me', async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const jwt = await import('jsonwebtoken');
+    const decoded = jwt.default.verify(token, process.env.JWT_SECRET || 'calibers-igloo-dashboard-jwt-secret');
     res.json({ user: decoded });
   } catch {
     res.status(401).json({ error: 'Invalid token' });
