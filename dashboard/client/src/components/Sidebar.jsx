@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Ticket, BarChart3, Shield, Settings,
   Activity, LogOut, Snowflake, ChevronLeft, ChevronRight,
   MessageSquare, Server, Terminal, FileText, Users, Hash,
+  FileSearch, Lock, Gift,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -14,6 +15,9 @@ const NAV = [
   { to: '/server', icon: Server, label: 'Server' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/blacklists', icon: Shield, label: 'Blacklists' },
+  { to: '/transcripts', icon: FileSearch, label: 'Transcripts' },
+  { to: '/verification', icon: Lock, label: 'Verification' },
+  { to: '/giveaways', icon: Gift, label: 'Giveaways' },
   { to: '/audit-logs', icon: FileText, label: 'Audit Logs' },
   { to: '/terminal', icon: Terminal, label: 'Terminal', ownerOnly: true },
   { to: '/users', icon: Users, label: 'Users', ownerOnly: true },
