@@ -5,7 +5,7 @@ import { useToast } from '../components/Toast.jsx';
 import {
   Hash, Volume2, Megaphone, Server, Users, Copy, Check,
   RefreshCw, MessageSquare, Shield, Eye, Folder, Lock,
-  Pencil, Trash2, AlertTriangle,
+  Pencil, Trash2, AlertTriangle, Radio,
 } from 'lucide-react';
 import ColorWheel from '../components/ColorWheel.jsx';
 
