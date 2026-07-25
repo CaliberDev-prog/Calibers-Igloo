@@ -7,10 +7,14 @@ import {
   MessageSquare, Image as ImageIcon, Loader2, AlertTriangle,
 } from 'lucide-react';
 
-function MessageBubble({ msg, channelId, onEdit, onDelete }) {
+function MessageBubble({ msg, channelId, botId, onEdit, onDelete }) {
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(msg.content);
+  const [editingEmbed, setEditingEmbed] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const { toast } = useToast();
+
+  const isBotMessage = botId && msg.author?.id === botId;
 
   const avatar = msg.author?.avatar
     ? `https://cdn.discordapp.com/avatars/${msg.author.id}/${msg.author.avatar}.png`
@@ -25,8 +29,20 @@ function MessageBubble({ msg, channelId, onEdit, onDelete }) {
       await api.editMessage(channelId, msg.id, editContent);
       onEdit(msg.id, editContent);
       setEditing(false);
+      toast('Message edited', 'success');
     } catch (err) {
-      console.error('Failed to edit:', err);
+      toast(err.message || 'Failed to edit message', 'error');
+    }
+  };
+
+  const handleEmbedSave = async (embed) => {
+    try {
+      await api.editMessage(channelId, msg.id, editContent || '', embed);
+      onEdit(msg.id, editContent, embed);
+      setEditingEmbed(false);
+      toast('Embed updated', 'success');
+    } catch (err) {
+      toast(err.message || 'Failed to edit embed', 'error');
     }
   };
 
@@ -34,8 +50,9 @@ function MessageBubble({ msg, channelId, onEdit, onDelete }) {
     try {
       await api.deleteMessage(channelId, msg.id);
       onDelete(msg.id);
+      toast('Message deleted', 'success');
     } catch (err) {
-      console.error('Failed to delete:', err);
+      toast(err.message || 'Failed to delete message', 'error');
     }
     setDeleting(false);
   };
@@ -71,6 +88,14 @@ function MessageBubble({ msg, channelId, onEdit, onDelete }) {
               </button>
             </div>
           </div>
+        ) : editingEmbed ? (
+          <div className="mt-1">
+            <EmbedBuilder
+              embed={msg.embeds?.[0]}
+              onSend={handleEmbedSave}
+              onClose={() => setEditingEmbed(false)}
+            />
+          </div>
         ) : (
           <>
             {msg.content && <p className="text-sm text-dark-300 whitespace-pre-wrap break-words">{msg.content}</p>}
@@ -99,12 +124,17 @@ function MessageBubble({ msg, channelId, onEdit, onDelete }) {
         )}
       </div>
 
-      {!editing && (
+      {!editing && !editingEmbed && isBotMessage && (
         <div className="flex items-start gap-1 opacity-0 group-hover:opacity-100 transition-opacity pt-0.5">
-          <button onClick={() => setEditing(true)} className="p-1.5 rounded-lg hover:bg-dark-700/50 text-dark-500 hover:text-ice-300 transition-colors">
+          {msg.embeds?.length > 0 ? (
+            <button onClick={() => setEditingEmbed(true)} className="p-1.5 rounded-lg hover:bg-dark-700/50 text-dark-500 hover:text-ice-300 transition-colors" title="Edit embed">
+              <ImageIcon className="w-3.5 h-3.5" />
+            </button>
+          ) : null}
+          <button onClick={() => setEditing(true)} className="p-1.5 rounded-lg hover:bg-dark-700/50 text-dark-500 hover:text-ice-300 transition-colors" title="Edit message">
             <Pencil className="w-3.5 h-3.5" />
           </button>
-          <button onClick={() => setDeleting(true)} className="p-1.5 rounded-lg hover:bg-dark-700/50 text-dark-500 hover:text-red-400 transition-colors">
+          <button onClick={() => setDeleting(true)} className="p-1.5 rounded-lg hover:bg-dark-700/50 text-dark-500 hover:text-red-400 transition-colors" title="Delete message">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -146,13 +176,18 @@ export default function MessagesPage() {
   const [showEmbedBuilder, setShowEmbedBuilder] = useState(false);
   const [newMessage, setNewMessage] = useState('');
   const [loadingChannels, setLoadingChannels] = useState(true);
+  const [botId, setBotId] = useState(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const data = await api.getChannels();
-        setChannels(data.channels.filter((c) => c.type === 0));
+        const [chData, overviewData] = await Promise.all([
+          api.getChannels(),
+          api.getOverview().catch(() => null),
+        ]);
+        setChannels(chData.channels.filter((c) => c.type === 0));
+        setBotId(overviewData?.bot?.id || null);
       } catch (err) {
         toast('Failed to load channels', 'error');
       }
@@ -196,16 +231,20 @@ export default function MessagesPage() {
     setSending(false);
   };
 
-  const handleEditMessage = (messageId, newContent) => {
+  const handleEditMessage = (messageId, newContent, newEmbed) => {
     setMessages((prev) =>
-      prev.map((m) => (m.id === messageId ? { ...m, content: newContent, edited_timestamp: new Date().toISOString() } : m))
+      prev.map((m) => {
+        if (m.id !== messageId) return m;
+        const updated = { ...m, edited_timestamp: new Date().toISOString() };
+        if (newContent !== undefined) updated.content = newContent;
+        if (newEmbed !== undefined) updated.embeds = [newEmbed];
+        return updated;
+      })
     );
-    toast('Message edited', 'success');
   };
 
   const handleDeleteMessage = (messageId) => {
     setMessages((prev) => prev.filter((m) => m.id !== messageId));
-    toast('Message deleted', 'success');
   };
 
   const selected = channels.find((c) => c.id === selectedChannel);
@@ -264,6 +303,7 @@ export default function MessagesPage() {
                     key={msg.id}
                     msg={msg}
                     channelId={selectedChannel}
+                    botId={botId}
                     onEdit={handleEditMessage}
                     onDelete={handleDeleteMessage}
                   />

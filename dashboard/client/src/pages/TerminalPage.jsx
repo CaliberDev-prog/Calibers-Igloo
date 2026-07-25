@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/auth.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { api } from '../lib/api.js';
-import { Terminal, Play, Clock, Trash2, Zap, AlertTriangle } from 'lucide-react';
+import { Terminal, Play, Clock, Trash2, Zap, AlertTriangle, Hash, ChevronDown } from 'lucide-react';
 
 const QUICK_COMMANDS = [
   { label: '!help', command: '!help', args: '' },
@@ -21,8 +21,24 @@ export default function TerminalPage() {
   const [input, setInput] = useState('');
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [channels, setChannels] = useState([]);
+  const [selectedChannel, setSelectedChannel] = useState('');
+  const [loadingChannels, setLoadingChannels] = useState(true);
 
   const isOwner = user?.role === 'owner';
+
+  useEffect(() => {
+    if (!isOwner) return;
+    (async () => {
+      try {
+        const data = await api.getChannels();
+        setChannels(data.channels.filter((c) => c.type === 0));
+      } catch {
+        toast('Failed to load channels', 'error');
+      }
+      setLoadingChannels(false);
+    })();
+  }, [isOwner]);
 
   const handleQuickCommand = (cmd) => {
     setInput(`${cmd.command} ${cmd.args}`.trim());
@@ -30,35 +46,35 @@ export default function TerminalPage() {
 
   const handleExecute = async () => {
     const trimmed = input.trim();
-    if (!trimmed || loading) return;
-
-    const parts = trimmed.split(/\s+/);
-    const command = parts[0];
-    const args = parts.slice(1);
+    if (!trimmed || loading || !selectedChannel) return;
 
     setLoading(true);
     try {
-      const result = await api.executeCommand(command, args);
+      const result = await api.sendMessage(selectedChannel, trimmed);
       setHistory((prev) => {
         const next = [
           {
             id: Date.now(),
             command: trimmed,
+            channelId: selectedChannel,
+            channelName: channels.find((c) => c.id === selectedChannel)?.name || selectedChannel,
             timestamp: new Date().toLocaleTimeString(),
-            result: result?.output || 'Command executed.',
+            result: result?.message?.id ? `Message sent (ID: ${result.message.id})` : 'Command sent.',
             status: 'success',
           },
           ...prev,
         ];
         return next.slice(0, MAX_HISTORY);
       });
-      toast('Command executed', 'success');
+      toast('Command sent to channel', 'success');
     } catch (err) {
       setHistory((prev) => {
         const next = [
           {
             id: Date.now(),
             command: trimmed,
+            channelId: selectedChannel,
+            channelName: channels.find((c) => c.id === selectedChannel)?.name || selectedChannel,
             timestamp: new Date().toLocaleTimeString(),
             result: err.message || 'Command failed.',
             status: 'error',
@@ -67,7 +83,7 @@ export default function TerminalPage() {
         ];
         return next.slice(0, MAX_HISTORY);
       });
-      toast('Command failed', 'error');
+      toast('Failed to send command', 'error');
     }
     setLoading(false);
     setInput('');
@@ -109,8 +125,32 @@ export default function TerminalPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-dark-100">Command Terminal</h1>
-          <p className="text-sm text-dark-400">Run bot commands from the dashboard</p>
+          <p className="text-sm text-dark-400">Send bot commands as messages in a channel</p>
         </div>
+      </div>
+
+      <div className="glass p-4 flex items-center gap-3">
+        <Hash className="w-5 h-5 text-dark-500 flex-shrink-0" />
+        <span className="text-sm text-dark-400 flex-shrink-0">Target Channel</span>
+        <select
+          value={selectedChannel}
+          onChange={(e) => setSelectedChannel(e.target.value)}
+          className="input-dark w-auto min-w-[250px]"
+          disabled={loadingChannels}
+        >
+          <option value="">
+            {loadingChannels ? 'Loading channels...' : 'Select a channel'}
+          </option>
+          {channels.map((ch) => (
+            <option key={ch.id} value={ch.id}># {ch.name}</option>
+          ))}
+        </select>
+        {selectedChannel && (
+          <span className="text-xs text-green-400 flex items-center gap-1 ml-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+            Ready
+          </span>
+        )}
       </div>
 
       <div className="glass p-5 space-y-3">
@@ -139,12 +179,13 @@ export default function TerminalPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a command... (e.g. !help, !purge 100)"
+            placeholder={!selectedChannel ? 'Select a channel first...' : 'Type a command... (e.g. !help, !purge 100)'}
             className="input-dark flex-1 font-mono text-sm"
+            disabled={!selectedChannel}
           />
           <button
             onClick={handleExecute}
-            disabled={!input.trim() || loading}
+            disabled={!input.trim() || loading || !selectedChannel}
             className="btn-primary flex items-center gap-2 disabled:opacity-40"
           >
             {loading ? (
@@ -155,6 +196,9 @@ export default function TerminalPage() {
             {loading ? 'Running...' : 'Execute'}
           </button>
         </div>
+        {!selectedChannel && (
+          <p className="text-xs text-yellow-400/70">Select a channel above to run commands</p>
+        )}
       </div>
 
       <div className="glass p-5 space-y-3">
@@ -183,10 +227,15 @@ export default function TerminalPage() {
             {history.map((entry) => (
               <div key={entry.id} className="bg-dark-900/50 border border-dark-700/30 rounded-xl p-4 space-y-2 animate-fade-in">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-sm text-ice-300 font-medium">{entry.command}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm text-ice-300 font-medium">{entry.command}</span>
+                    <span className="text-[10px] text-dark-600 bg-dark-800/80 rounded-lg px-2 py-0.5 flex items-center gap-1">
+                      <Hash className="w-2.5 h-2.5" /> {entry.channelName}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-xs px-2 py-0.5 rounded-lg ${entry.status === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                      {entry.status === 'success' ? 'Success' : 'Error'}
+                      {entry.status === 'success' ? 'Sent' : 'Error'}
                     </span>
                     <span className="text-xs text-dark-500">{entry.timestamp}</span>
                   </div>

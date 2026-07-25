@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Palette } from 'lucide-react';
 import ColorWheel from './ColorWheel.jsx';
 
@@ -9,7 +9,12 @@ function parseColor(hex) {
   return parseInt(hex.replace('#', ''), 16);
 }
 
-export default function EmbedBuilder({ onSend, onClose }) {
+function intToHex(int) {
+  if (!int || int === 0) return '#75cff5';
+  return `#${int.toString(16).padStart(6, '0')}`;
+}
+
+export default function EmbedBuilder({ embed: initialEmbed, onSend, onClose }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#75cff5');
@@ -20,6 +25,20 @@ export default function EmbedBuilder({ onSend, onClose }) {
   const [thumbnail, setThumbnail] = useState('');
   const [fields, setFields] = useState([]);
   const [showColorPicker, setShowColorPicker] = useState(false);
+
+  useEffect(() => {
+    if (initialEmbed) {
+      setTitle(initialEmbed.title || '');
+      setDescription(initialEmbed.description || '');
+      setColor(intToHex(initialEmbed.color));
+      setAuthorName(initialEmbed.author?.name || '');
+      setAuthorIcon(initialEmbed.author?.icon_url || '');
+      setFooterText(initialEmbed.footer?.text || '');
+      setImage(initialEmbed.image?.url || '');
+      setThumbnail(initialEmbed.thumbnail?.url || '');
+      setFields(initialEmbed.fields?.map((f) => ({ name: f.name || '', value: f.value || '', inline: f.inline || false })) || []);
+    }
+  }, [initialEmbed]);
 
   const updateField = (i, key, val) => {
     setFields((prev) => prev.map((f, idx) => (idx === i ? { ...f, [key]: val } : f)));
@@ -35,23 +54,23 @@ export default function EmbedBuilder({ onSend, onClose }) {
   };
 
   const buildEmbed = () => {
-    const embed = {};
-    if (title) embed.title = title;
-    if (description) embed.description = description;
-    if (color) embed.color = parseColor(color);
-    if (authorName) embed.author = { name: authorName, ...(authorIcon ? { icon_url: authorIcon } : {}) };
-    if (footerText) embed.footer = { text: footerText };
-    if (image) embed.image = { url: image };
-    if (thumbnail) embed.thumbnail = { url: thumbnail };
+    const e = {};
+    if (title) e.title = title;
+    if (description) e.description = description;
+    if (color) e.color = parseColor(color);
+    if (authorName) e.author = { name: authorName, ...(authorIcon ? { icon_url: authorIcon } : {}) };
+    if (footerText) e.footer = { text: footerText };
+    if (image) e.image = { url: image };
+    if (thumbnail) e.thumbnail = { url: thumbnail };
     const validFields = fields.filter((f) => f.name || f.value);
-    if (validFields.length) embed.fields = validFields.map((f) => ({ name: f.name || '\u200b', value: f.value || '\u200b', inline: f.inline }));
-    return embed;
+    if (validFields.length) e.fields = validFields.map((f) => ({ name: f.name || '\u200b', value: f.value || '\u200b', inline: f.inline }));
+    return e;
   };
 
   const handleSend = () => {
-    const embed = buildEmbed();
-    if (!Object.keys(embed).length) return;
-    onSend(embed);
+    const e = buildEmbed();
+    if (!Object.keys(e).length) return;
+    onSend(e);
   };
 
   const previewEmbed = buildEmbed();
@@ -59,7 +78,7 @@ export default function EmbedBuilder({ onSend, onClose }) {
   return (
     <div className="glass p-5 space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-dark-200">Embed Builder</h3>
+        <h3 className="text-sm font-semibold text-dark-200">{initialEmbed ? 'Edit Embed' : 'Embed Builder'}</h3>
         <button onClick={onClose} className="text-dark-500 hover:text-dark-300 transition-colors">
           <X className="w-4 h-4" />
         </button>
@@ -216,7 +235,7 @@ export default function EmbedBuilder({ onSend, onClose }) {
 
       <div className="flex justify-end gap-2 pt-2 border-t border-dark-700/30">
         <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
-        <button onClick={handleSend} className="btn-primary text-sm">Send Embed</button>
+        <button onClick={handleSend} className="btn-primary text-sm">{initialEmbed ? 'Save Embed' : 'Send Embed'}</button>
       </div>
     </div>
   );

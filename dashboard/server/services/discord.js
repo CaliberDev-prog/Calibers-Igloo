@@ -99,3 +99,11 @@ export async function deleteRole(roleId) {
   await discordMethod('DELETE', `/guilds/${GUILD_ID}/roles/${roleId}`);
   return { success: true };
 }
+
+export async function reorderChannels(positions) {
+  return discordMethod('PATCH', `/guilds/${GUILD_ID}/channels`, positions);
+}
+
+export async function reorderRoles(positions) {
+  return discordMethod('PATCH', `/guilds/${GUILD_ID}/roles`, positions);
+}

@@ -46,4 +46,6 @@ export const api = {
   removeParticipant: (ticketId, userId) => request(`/tickets/${ticketId}/participants/${userId}`, { method: 'DELETE' }),
   editBlacklist: (id, data) => request(`/blacklists/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   executeCommand: (command, args = []) => request('/commands/execute', { method: 'POST', body: JSON.stringify({ command, args }) }),
+  reorderChannels: (positions) => request('/channels-reorder', { method: 'PATCH', body: JSON.stringify({ positions }) }),
+  reorderRoles: (positions) => request('/roles-reorder', { method: 'PATCH', body: JSON.stringify({ positions }) }),
 };

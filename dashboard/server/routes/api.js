@@ -22,6 +22,17 @@ router.get('/overview', requireStaff, async (req, res) => {
       TicketBlacklist.countDocuments(),
     ]);
 
+    let botUser = null;
+    try {
+      const token = process.env.DISCORD_BOT_TOKEN;
+      if (token) {
+        const res = await fetch('https://discord.com/api/v10/users/@me', {
+          headers: { Authorization: `Bot ${token}` },
+        });
+        if (res.ok) botUser = await res.json();
+      }
+    } catch {}
+
     const byDept = await Ticket.aggregate([
       { $match: { status: 'open' } },
       { $group: { _id: '$departmentId', count: { $sum: 1 } } },
@@ -44,7 +55,7 @@ router.get('/overview', requireStaff, async (req, res) => {
       recentTickets,
       blacklists,
       database: dbState,
-      bot: { uptime: process.uptime(), memory: process.memoryUsage(), nodeVersion: process.version },
+      bot: { id: botUser?.id || null, uptime: process.uptime(), memory: process.memoryUsage(), nodeVersion: process.version },
     });
   } catch (err) {
     console.error('[API] Overview error:', err);
@@ -98,6 +109,18 @@ router.patch('/channels/:channelId', requireOwner, async (req, res) => {
   }
 });
 
+router.patch('/channels-reorder', requireOwner, async (req, res) => {
+  try {
+    const { positions } = req.body;
+    if (!Array.isArray(positions)) return res.status(400).json({ error: 'positions array required' });
+    await discord.reorderChannels(positions);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[API] Reorder channels error:', err);
+    res.status(500).json({ error: 'Failed to reorder channels' });
+  }
+});
+
 router.get('/roles', requireStaff, async (req, res) => {
   try {
     const roles = await discord.getRoles();
@@ -129,6 +152,18 @@ router.delete('/roles/:roleId', requireOwner, async (req, res) => {
   } catch (err) {
     console.error('[API] Delete role error:', err);
     res.status(500).json({ error: 'Failed to delete role' });
+  }
+});
+
+router.patch('/roles-reorder', requireOwner, async (req, res) => {
+  try {
+    const { positions } = req.body;
+    if (!Array.isArray(positions)) return res.status(400).json({ error: 'positions array required' });
+    await discord.reorderRoles(positions);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[API] Reorder roles error:', err);
+    res.status(500).json({ error: 'Failed to reorder roles' });
   }
 });
 
