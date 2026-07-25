@@ -3,7 +3,7 @@ import { useAuth } from '../lib/auth.jsx';
 import {
   LayoutDashboard, Ticket, BarChart3, Shield, Settings,
   Activity, LogOut, Snowflake, ChevronLeft, ChevronRight,
-  MessageSquare, Server, Terminal,
+  MessageSquare, Server, Terminal, FileText, Users, Hash,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -14,7 +14,9 @@ const NAV = [
   { to: '/server', icon: Server, label: 'Server' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/blacklists', icon: Shield, label: 'Blacklists' },
+  { to: '/audit-logs', icon: FileText, label: 'Audit Logs' },
   { to: '/terminal', icon: Terminal, label: 'Terminal', ownerOnly: true },
+  { to: '/users', icon: Users, label: 'Users', ownerOnly: true },
   { to: '/health', icon: Activity, label: 'System' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
@@ -47,6 +49,17 @@ export default function Sidebar() {
             <p className="text-xs text-dark-500 truncate">Dashboard</p>
           </div>
         )}
+      </div>
+
+      <div className={`px-3 pt-3 pb-1 ${collapsed ? 'hidden' : ''}`}>
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('open-command-palette'))}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-dark-800/40 border border-dark-700/30 text-dark-500 hover:text-dark-300 hover:border-dark-600/50 transition-all text-xs"
+        >
+          <Hash className="w-3.5 h-3.5" />
+          <span className="flex-1 text-left">Search...</span>
+          <kbd className="text-[9px] px-1 py-0.5 rounded bg-dark-700/50 border border-dark-600/30">⌘K</kbd>
+        </button>
       </div>
 
       <nav className="flex-1 p-2 space-y-1 overflow-y-auto">

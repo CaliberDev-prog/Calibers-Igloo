@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar.jsx';
+import CommandPalette from './CommandPalette.jsx';
 
 export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -37,6 +38,7 @@ export default function Layout() {
           <Outlet />
         </div>
       </main>
+      <CommandPalette />
     </div>
   );
 }

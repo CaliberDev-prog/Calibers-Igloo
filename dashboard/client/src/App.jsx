@@ -13,6 +13,8 @@ import HealthPage from './pages/HealthPage.jsx';
 import MessagesPage from './pages/MessagesPage.jsx';
 import ServerPage from './pages/ServerPage.jsx';
 import TerminalPage from './pages/TerminalPage.jsx';
+import AuditLogsPage from './pages/AuditLogsPage.jsx';
+import UsersPage from './pages/UsersPage.jsx';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -51,6 +53,8 @@ export default function App() {
               <Route path="messages" element={<MessagesPage />} />
               <Route path="server" element={<ServerPage />} />
               <Route path="terminal" element={<TerminalPage />} />
+              <Route path="audit-logs" element={<AuditLogsPage />} />
+              <Route path="users" element={<UsersPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

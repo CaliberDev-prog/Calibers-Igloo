@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 import { authenticate, requireOwner, requireStaff } from '../middleware/auth.js';
 import * as discord from '../services/discord.js';
 
@@ -9,6 +10,8 @@ const Ticket = mongoose.model('Ticket', new mongoose.Schema({}, { strict: false 
 const TicketBlacklist = mongoose.model('TicketBlacklist', new mongoose.Schema({}, { strict: false }));
 const Counter = mongoose.model('Counter', new mongoose.Schema({}, { strict: false }));
 const BotConfig = mongoose.model('BotConfig', new mongoose.Schema({}, { strict: false }));
+const AuditLog = mongoose.model('AuditLog', new mongoose.Schema({}, { strict: false }));
+const DashboardUser = mongoose.model('DashboardUser', new mongoose.Schema({}, { strict: false }));
 
 router.use(authenticate);
 
@@ -408,6 +411,104 @@ router.get('/health', (req, res) => {
     nodeVersion: process.version,
     timestamp: new Date().toISOString(),
   });
+});
+
+router.get('/audit-logs', requireStaff, async (req, res) => {
+  try {
+    const { category, search, page = 1, limit = 25 } = req.query;
+    const filter = {};
+    if (category && category !== 'all') filter.category = category;
+    if (search) {
+      filter.$or = [
+        { action: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { username: { $regex: search, $options: 'i' } },
+        { target: { $regex: search, $options: 'i' } },
+      ];
+    }
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const [logs, total] = await Promise.all([
+      AuditLog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).lean(),
+      AuditLog.countDocuments(filter),
+    ]);
+    res.json({ logs, pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) } });
+  } catch (err) {
+    console.error('[API] Audit logs error:', err);
+    res.status(500).json({ error: 'Failed to fetch audit logs' });
+  }
+});
+
+router.post('/audit-logs', requireStaff, async (req, res) => {
+  try {
+    const { action, category, description, target, targetId, metadata } = req.body;
+    const log = await AuditLog.create({
+      action, category: category || 'general', description,
+      userId: req.user.id, username: req.user.username,
+      target, targetId, metadata,
+      ip: req.ip,
+    });
+    res.json({ log });
+  } catch (err) {
+    console.error('[API] Create audit log error:', err);
+    res.status(500).json({ error: 'Failed to create audit log' });
+  }
+});
+
+router.get('/users', requireOwner, async (req, res) => {
+  try {
+    const users = await DashboardUser.find({}, { passwordHash: 0 }).lean();
+    res.json({ users });
+  } catch (err) {
+    console.error('[API] Users error:', err);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+router.post('/users', requireOwner, async (req, res) => {
+  try {
+    const { username, password, role } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+    const existing = await DashboardUser.findOne({ username });
+    if (existing) return res.status(400).json({ error: 'Username already exists' });
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = await DashboardUser.create({
+      userId: `manual_${Date.now()}`, username, passwordHash, role: role || 'support',
+    });
+    await AuditLog.create({ action: 'dashboard.user.create', category: 'auth', description: `Created user ${username}`, userId: req.user.id, username: req.user.username, target: username });
+    res.json({ user: { _id: user._id, username: user.username, role: user.role, userId: user.userId } });
+  } catch (err) {
+    console.error('[API] Create user error:', err);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+router.patch('/users/:userId', requireOwner, async (req, res) => {
+  try {
+    const { role } = req.body;
+    const user = await DashboardUser.findById(req.params.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (role) user.role = role;
+    await user.save();
+    await AuditLog.create({ action: 'dashboard.user.update', category: 'auth', description: `Updated user ${user.username}`, userId: req.user.id, username: req.user.username, target: user.username });
+    res.json({ user: { _id: user._id, username: user.username, role: user.role } });
+  } catch (err) {
+    console.error('[API] Update user error:', err);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+router.delete('/users/:userId', requireOwner, async (req, res) => {
+  try {
+    const user = await DashboardUser.findById(req.params.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.role === 'owner') return res.status(400).json({ error: 'Cannot delete owner' });
+    await DashboardUser.findByIdAndDelete(req.params.userId);
+    await AuditLog.create({ action: 'dashboard.user.delete', category: 'auth', description: `Deleted user ${user.username}`, userId: req.user.id, username: req.user.username, target: user.username });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[API] Delete user error:', err);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
 });
 
 export default router;

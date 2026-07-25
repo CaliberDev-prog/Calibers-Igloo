@@ -3,7 +3,7 @@ import { api } from '../lib/api.js';
 import { useToast } from '../components/Toast.jsx';
 import {
   Search, Filter, ChevronLeft, ChevronRight, Ticket,
-  ArrowUpDown, RefreshCw, X, Eye, XCircle,
+  ArrowUpDown, RefreshCw, X, Eye, XCircle, FileText,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -136,10 +136,16 @@ export default function TicketsPage() {
             <div className="w-8 h-8 border-2 border-ice-300/30 border-t-ice-300 rounded-full animate-spin" />
           </div>
         ) : tickets.length === 0 ? (
-          <div className="text-center py-16">
-            <Ticket className="w-14 h-14 mx-auto mb-4 opacity-20 text-dark-500" />
-            <p className="text-dark-400 text-sm font-medium">No tickets found</p>
-            <p className="text-dark-600 text-xs mt-1">Try adjusting your filters or search query</p>
+          <div className="flex flex-col items-center py-16">
+            <div className="w-20 h-20 rounded-2xl bg-dark-800/40 border border-dark-700/30 flex items-center justify-center mb-6">
+              <Ticket className="w-10 h-10 text-dark-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-dark-300 mb-2">No Tickets Found</h3>
+            <p className="text-sm text-dark-500 max-w-xs text-center">
+              {search || statusFilter !== 'all' || deptFilter !== 'all'
+                ? 'Try adjusting your filters or search query'
+                : 'Tickets will appear here when users create them'}
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-dark-700/20">

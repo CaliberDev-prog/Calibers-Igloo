@@ -48,4 +48,10 @@ export const api = {
   executeCommand: (command, args = []) => request('/commands/execute', { method: 'POST', body: JSON.stringify({ command, args }) }),
   reorderChannels: (positions) => request('/channels-reorder', { method: 'PATCH', body: JSON.stringify({ positions }) }),
   reorderRoles: (positions) => request('/roles-reorder', { method: 'PATCH', body: JSON.stringify({ positions }) }),
+  getAuditLogs: (params = {}) => request(`/audit-logs?${new URLSearchParams(params)}`),
+  createAuditLog: (data) => request('/audit-logs', { method: 'POST', body: JSON.stringify(data) }),
+  getUsers: () => request('/users'),
+  createUser: (data) => request('/users', { method: 'POST', body: JSON.stringify(data) }),
+  updateUser: (id, data) => request(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteUser: (id) => request(`/users/${id}`, { method: 'DELETE' }),
 };
