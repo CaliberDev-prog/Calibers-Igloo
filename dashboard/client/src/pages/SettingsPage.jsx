@@ -1,6 +1,10 @@
 import { useAuth } from '../lib/auth.jsx';
-import { Settings, Ticket, MessageSquare, Shield, Bell, Hash, Snowflake, Lock } from 'lucide-react';
-import { useState } from 'react';
+import { api } from '../lib/api.js';
+import { useToast } from '../components/Toast.jsx';
+import { Settings, Ticket, MessageSquare, Shield, Bell, Hash, Snowflake, Lock, Save, Check } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import ChannelSelector from '../components/ChannelSelector.jsx';
+import RoleSelector from '../components/RoleSelector.jsx';
 
 const SECTIONS = [
   {
@@ -8,10 +12,10 @@ const SECTIONS = [
     icon: Ticket,
     label: 'Ticket System',
     settings: [
-      { key: 'ticketLimitPerDepartment', label: 'Ticket Limit per Department', type: 'number', value: 2, desc: 'Max open tickets per user per department' },
-      { key: 'alertCooldownSeconds', label: 'Alert Cooldown', type: 'text', value: '30 minutes', desc: 'Time between alert pings' },
-      { key: 'autoCloseInactiveHours', label: 'Auto-Close Inactive', type: 'text', value: '48 hours', desc: 'Auto-close tickets inactive for this long' },
-      { key: 'transcriptDM', label: 'Transcript DM', type: 'toggle', value: true, desc: 'DM transcripts to ticket creator on close' },
+      { key: 'ticketLimitPerDepartment', label: 'Ticket Limit per Department', type: 'number', desc: 'Max open tickets per user per department' },
+      { key: 'alertCooldownSeconds', label: 'Alert Cooldown (seconds)', type: 'number', desc: 'Time between alert pings in seconds' },
+      { key: 'autoCloseInactiveHours', label: 'Auto-Close Inactive (hours)', type: 'number', desc: 'Auto-close tickets inactive for this long' },
+      { key: 'transcriptDM', label: 'Transcript DM', type: 'toggle', desc: 'DM transcripts to ticket creator on close' },
     ],
   },
   {
@@ -19,9 +23,12 @@ const SECTIONS = [
     icon: Hash,
     label: 'Departments',
     settings: [
-      { key: 'general', label: 'General Support', type: 'info', value: 'Enabled - Category: 1530532240331771914', desc: 'Support role: 1530554415558299709' },
-      { key: 'reports', label: 'Reports', type: 'info', value: 'Enabled - Category: 1530532184480550923', desc: 'Support role: 1530554438945738883' },
-      { key: 'hiring', label: 'Hiring', type: 'info', value: 'Enabled - Category: 1530532279242457128', desc: 'Support role: 1530554455018176552' },
+      { key: 'generalCategory', label: 'General Category', type: 'channel', channelType: 4, desc: 'Category channel for general support tickets' },
+      { key: 'generalRole', label: 'General Support Role', type: 'role', desc: 'Role for general support staff' },
+      { key: 'reportsCategory', label: 'Reports Category', type: 'channel', channelType: 4, desc: 'Category channel for report tickets' },
+      { key: 'reportsRole', label: 'Reports Role', type: 'role', desc: 'Role for reports staff' },
+      { key: 'hiringCategory', label: 'Hiring Category', type: 'channel', channelType: 4, desc: 'Category channel for hiring tickets' },
+      { key: 'hiringRole', label: 'Hiring Role', type: 'role', desc: 'Role for hiring staff' },
     ],
   },
   {
@@ -29,8 +36,8 @@ const SECTIONS = [
     icon: Lock,
     label: 'Verification',
     settings: [
-      { key: 'verificationChannel', label: 'Verification Channel', type: 'info', value: '1530545074222399651', desc: 'Channel for the verification gate' },
-      { key: 'verificationTimeout', label: 'Timeout Notification', type: 'info', value: '1530531652122579066', desc: 'Channel for timeout alerts' },
+      { key: 'verificationChannel', label: 'Verification Channel', type: 'channel', desc: 'Channel for the verification gate' },
+      { key: 'verificationTimeout', label: 'Timeout Notification Channel', type: 'channel', desc: 'Channel for timeout alerts' },
     ],
   },
   {
@@ -38,8 +45,8 @@ const SECTIONS = [
     icon: Snowflake,
     label: 'Welcome & Roles',
     settings: [
-      { key: 'welcomeChannel', label: 'Welcome Channel', type: 'info', value: '1530531579552731178', desc: 'Channel for welcome messages' },
-      { key: 'rolesChannel', label: 'Roles Channel', type: 'info', value: '1530531583587651636', desc: 'Channel for reaction roles' },
+      { key: 'welcomeChannel', label: 'Welcome Channel', type: 'channel', desc: 'Channel for welcome messages' },
+      { key: 'rolesChannel', label: 'Roles Channel', type: 'channel', desc: 'Channel for reaction roles' },
     ],
   },
   {
@@ -47,12 +54,12 @@ const SECTIONS = [
     icon: Bell,
     label: 'Notifications & Logging',
     settings: [
-      { key: 'botAlerts', label: 'Bot Activity Alerts', type: 'toggle', value: true, desc: 'DM owner on every bot action' },
-      { key: 'ticketLog', label: 'Ticket Log Channel', type: 'info', value: '1530531646397481103', desc: 'Where ticket actions are logged' },
-      { key: 'errorLog', label: 'Error Log Channel', type: 'info', value: '1530531650675413074', desc: 'Where errors are logged' },
-      { key: 'transcriptLog', label: 'Transcript Log', type: 'info', value: '1530583332730048562', desc: 'Where transcripts are saved' },
-      { key: 'inviteLog', label: 'Invite Tracking', type: 'info', value: '1530595513924059289', desc: 'Invite join tracking channel' },
-      { key: 'warningLog', label: 'Warning Log', type: 'info', value: '1530531653234200669', desc: 'Where warnings are logged' },
+      { key: 'botAlerts', label: 'Bot Activity Alerts', type: 'toggle', desc: 'DM owner on every bot action' },
+      { key: 'ticketLog', label: 'Ticket Log Channel', type: 'channel', desc: 'Where ticket actions are logged' },
+      { key: 'errorLog', label: 'Error Log Channel', type: 'channel', desc: 'Where errors are logged' },
+      { key: 'transcriptLog', label: 'Transcript Log Channel', type: 'channel', desc: 'Where transcripts are saved' },
+      { key: 'inviteLog', label: 'Invite Tracking Channel', type: 'channel', desc: 'Invite join tracking channel' },
+      { key: 'warningLog', label: 'Warning Log Channel', type: 'channel', desc: 'Where warnings are logged' },
     ],
   },
   {
@@ -60,58 +67,80 @@ const SECTIONS = [
     icon: Shield,
     label: 'Security & Permissions',
     settings: [
-      { key: 'staffRoles', label: 'Staff Roles', type: 'info', value: '1530531573332447324, 1530531568605597718', desc: 'Roles with staff access' },
-      { key: 'ownerId', label: 'Bot Owner', type: 'info', value: '1293164546005012512', desc: 'Owner ID with full access' },
-      { key: 'prefix', label: 'Command Prefix', type: 'text', value: '!', desc: 'Default prefix for text commands' },
+      { key: 'staffRole', label: 'Staff Role', type: 'role', desc: 'Primary role with staff access' },
+      { key: 'ownerId', label: 'Bot Owner', type: 'text', desc: 'Owner ID with full access' },
+      { key: 'prefix', label: 'Command Prefix', type: 'text', desc: 'Default prefix for text commands' },
     ],
   },
 ];
 
-function SettingRow({ setting }) {
-  const [enabled, setEnabled] = useState(setting.value);
-
-  return (
-    <div className="flex items-center justify-between py-3 border-b border-dark-700/20 last:border-0">
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-dark-200">{setting.label}</p>
-        <p className="text-xs text-dark-500 mt-0.5">{setting.desc}</p>
-      </div>
-      <div className="flex-shrink-0 ml-4">
-        {setting.type === 'toggle' ? (
-          <button
-            onClick={() => setEnabled(!enabled)}
-            className={`w-11 h-6 rounded-full transition-all duration-200 relative ${enabled ? 'bg-ice-300/30' : 'bg-dark-700'}`}
-          >
-            <div className={`w-5 h-5 rounded-full transition-all duration-200 absolute top-0.5 ${enabled ? 'left-[22px] bg-ice-300' : 'left-0.5 bg-dark-500'}`} />
-          </button>
-        ) : setting.type === 'number' ? (
-          <input type="number" defaultValue={setting.value} className="input-dark w-20 text-center text-sm" />
-        ) : setting.type === 'text' ? (
-          <input type="text" defaultValue={setting.value} className="input-dark w-36 text-sm" />
-        ) : (
-          <span className="text-xs text-dark-400 bg-dark-800/50 px-3 py-1.5 rounded-lg border border-dark-700/30 max-w-[250px] truncate inline-block">
-            {setting.value}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export default function SettingsPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const isOwner = user?.id === '1293164546005012512';
   const [activeSection, setActiveSection] = useState('tickets');
+  const [settings, setSettings] = useState({});
+  const [channels, setChannels] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
-  const current = SECTIONS.find(s => s.id === activeSection);
+  useEffect(() => {
+    Promise.all([
+      api.getConfig().catch(() => ({})),
+      api.getChannels().catch(() => ({ channels: [] })),
+      api.getRoles().catch(() => ({ roles: [] })),
+    ]).then(([config, chData, roleData]) => {
+      if (config?.settings) setSettings(config.settings);
+      setChannels(chData.channels || []);
+      setRoles(roleData.roles || []);
+      setConfigLoaded(true);
+    });
+  }, []);
+
+  const current = SECTIONS.find((s) => s.id === activeSection);
+
+  const updateSetting = (key, value) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
+    setSaved(false);
+  };
+
+  const saveSettings = async () => {
+    setSaving(true);
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings }),
+      });
+      toast('Settings saved successfully!', 'success');
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch {
+      toast('Failed to save settings', 'error');
+    }
+    setSaving(false);
+  };
+
+  if (!configLoaded) {
+    return (
+      <div className="flex justify-center py-20">
+        <div className="w-8 h-8 border-2 border-ice-300/30 border-t-ice-300 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-dark-100">Settings</h1>
-        <p className="text-dark-400 text-sm mt-1">
-          {isOwner ? 'Full access - all settings editable' : 'View-only access'}
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-dark-100">Settings</h1>
+          <p className="text-dark-400 text-sm mt-1">
+            {isOwner ? 'Full access - all settings editable' : 'View-only access'}
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -142,13 +171,69 @@ export default function SettingsPage() {
 
           <div className="space-y-0">
             {current?.settings.map((setting) => (
-              <SettingRow key={setting.key} setting={setting} />
+              <div key={setting.key} className="flex items-center justify-between py-3 border-b border-dark-700/20 last:border-0">
+                <div className="min-w-0 flex-1 mr-4">
+                  <p className="text-sm font-medium text-dark-200">{setting.label}</p>
+                  <p className="text-xs text-dark-500 mt-0.5">{setting.desc}</p>
+                </div>
+                <div className="flex-shrink-0">
+                  {setting.type === 'toggle' ? (
+                    <button
+                      onClick={() => isOwner && updateSetting(setting.key, !settings[setting.key])}
+                      className={`w-11 h-6 rounded-full transition-all duration-200 relative ${settings[setting.key] ? 'bg-ice-300/30' : 'bg-dark-700'} ${!isOwner ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <div className={`w-5 h-5 rounded-full transition-all duration-200 absolute top-0.5 ${settings[setting.key] ? 'left-[22px] bg-ice-300' : 'left-0.5 bg-dark-500'}`} />
+                    </button>
+                  ) : setting.type === 'number' ? (
+                    <input
+                      type="number"
+                      value={settings[setting.key] ?? ''}
+                      onChange={(e) => isOwner && updateSetting(setting.key, Number(e.target.value))}
+                      className="input-dark w-20 text-center text-sm"
+                      disabled={!isOwner}
+                    />
+                  ) : setting.type === 'text' ? (
+                    <input
+                      type="text"
+                      value={settings[setting.key] ?? ''}
+                      onChange={(e) => isOwner && updateSetting(setting.key, e.target.value)}
+                      className="input-dark w-40 text-sm"
+                      disabled={!isOwner}
+                    />
+                  ) : setting.type === 'channel' ? (
+                    <div className="w-64">
+                      <ChannelSelector
+                        channels={channels}
+                        value={settings[setting.key] || ''}
+                        onChange={(val) => isOwner && updateSetting(setting.key, val)}
+                        filter={setting.channelType}
+                      />
+                    </div>
+                  ) : setting.type === 'role' ? (
+                    <div className="w-64">
+                      <RoleSelector
+                        roles={roles}
+                        value={settings[setting.key] || ''}
+                        onChange={(val) => isOwner && updateSetting(setting.key, val)}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             ))}
           </div>
 
           {isOwner && (
-            <div className="mt-6 pt-4 border-t border-dark-700/30 flex justify-end">
-              <button className="btn-primary">Save Changes</button>
+            <div className="mt-6 pt-4 border-t border-dark-700/30 flex items-center justify-end gap-3">
+              {saved && (
+                <span className="text-sm text-green-400 flex items-center gap-1.5 animate-fade-in">
+                  <Check className="w-4 h-4" /> Saved!
+                </span>
+              )}
+              <button onClick={saveSettings} disabled={saving} className="btn-primary flex items-center gap-2 disabled:opacity-50">
+                <Save className="w-4 h-4" />
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
             </div>
           )}
         </div>

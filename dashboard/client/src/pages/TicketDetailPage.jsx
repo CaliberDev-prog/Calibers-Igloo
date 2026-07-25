@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api.js';
-import { ArrowLeft, User, Clock, MessageSquare, Hash, Copy, Check } from 'lucide-react';
+import { useToast } from '../components/Toast.jsx';
+import {
+  ArrowLeft, User, Clock, MessageSquare, Hash, Copy, Check,
+  XCircle, UserPlus, UserMinus, Send, Eye,
+} from 'lucide-react';
 
 const DEPTS = {
   general: { name: 'General Support', emoji: '🛟' },
@@ -11,26 +15,80 @@ const DEPTS = {
 
 export default function TicketDetailPage() {
   const { ticketId } = useParams();
+  const { toast } = useToast();
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [participantId, setParticipantId] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await api.getTicket(ticketId);
-        setTicket(data.ticket);
-      } catch (err) {
-        console.error(err);
-      }
-      setLoading(false);
-    })();
-  }, [ticketId]);
+  const fetchTicket = async () => {
+    try {
+      const data = await api.getTicket(ticketId);
+      setTicket(data.ticket);
+    } catch (err) {
+      console.error(err);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchTicket(); }, [ticketId]);
 
   const copyId = () => {
     navigator.clipboard.writeText(ticket?.creatorId || '');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const closeTicket = async () => {
+    setClosing(true);
+    try {
+      await fetch(`/api/tickets/${ticketId}/close`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      toast('Ticket closed', 'success');
+      fetchTicket();
+    } catch {
+      toast('Failed to close ticket', 'error');
+    }
+    setClosing(false);
+  };
+
+  const addParticipant = async () => {
+    if (!participantId.trim()) return;
+    setActionLoading(true);
+    try {
+      await fetch(`/api/tickets/${ticketId}/participants`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: participantId }),
+      });
+      toast('Participant added', 'success');
+      setParticipantId('');
+      fetchTicket();
+    } catch {
+      toast('Failed to add participant', 'error');
+    }
+    setActionLoading(false);
+  };
+
+  const removeParticipant = async (userId) => {
+    setActionLoading(true);
+    try {
+      await fetch(`/api/tickets/${ticketId}/participants/${userId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      toast('Participant removed', 'success');
+      fetchTicket();
+    } catch {
+      toast('Failed to remove participant', 'error');
+    }
+    setActionLoading(false);
   };
 
   if (loading) {
@@ -63,7 +121,7 @@ export default function TicketDetailPage() {
         <Link to="/tickets" className="btn-ghost p-2">
           <ArrowLeft className="w-5 h-5" />
         </Link>
-        <div>
+        <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-dark-100">#{String(ticket.ticketId).padStart(4, '0')}</h1>
             <span className={`text-xs px-3 py-1 rounded-full border ${statusColors[ticket.status] || statusColors.open}`}>
@@ -71,6 +129,29 @@ export default function TicketDetailPage() {
             </span>
           </div>
           <p className="text-dark-400 text-sm mt-1">{dept?.emoji} {dept?.name || ticket.departmentId}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {ticket.status === 'open' && (
+            <button onClick={closeTicket} disabled={closing} className="btn-danger flex items-center gap-2 text-sm disabled:opacity-50">
+              {closing ? (
+                <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+              ) : (
+                <XCircle className="w-4 h-4" />
+              )}
+              Close Ticket
+            </button>
+          )}
+          {ticket.channelId && (
+            <a
+              href={`https://discord.com/channels/${ticket.guildId || '@me'}/${ticket.channelId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-ghost flex items-center gap-2 text-sm"
+            >
+              <Eye className="w-4 h-4" />
+              View Channel
+            </a>
+          )}
         </div>
       </div>
 
@@ -81,9 +162,12 @@ export default function TicketDetailPage() {
           <div className="flex items-center gap-2">
             <p className="text-sm text-dark-200 font-medium truncate">{ticket.creatorTag || ticket.creatorId}</p>
             <button onClick={copyId} className="text-dark-500 hover:text-dark-300 transition-colors">
-              {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+              {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
             </button>
           </div>
+          {ticket.creatorId && (
+            <p className="text-xs text-dark-600 font-mono mt-0.5">{ticket.creatorId}</p>
+          )}
         </div>
         <div className="stat-card">
           <Hash className="w-5 h-5 text-ice-300 mb-1" />
@@ -99,6 +183,7 @@ export default function TicketDetailPage() {
           <MessageSquare className="w-5 h-5 text-ice-300 mb-1" />
           <p className="text-xs text-dark-500">Messages</p>
           <p className="text-sm text-dark-200">{(ticket.staffMessageCount || 0) + (ticket.userMessageCount || 0)}</p>
+          <p className="text-xs text-dark-500">Staff: {ticket.staffMessageCount || 0} · User: {ticket.userMessageCount || 0}</p>
         </div>
       </div>
 
@@ -116,18 +201,45 @@ export default function TicketDetailPage() {
         </div>
       )}
 
-      {ticket.participants && ticket.participants.length > 0 && (
-        <div className="glass p-6 animate-fade-in">
-          <h3 className="text-sm font-semibold text-dark-200 mb-3">Participants</h3>
-          <div className="flex flex-wrap gap-2">
+      <div className="glass p-6 animate-fade-in">
+        <h3 className="text-sm font-semibold text-dark-200 mb-3">Participants</h3>
+        {ticket.participants && ticket.participants.length > 0 ? (
+          <div className="flex flex-wrap gap-2 mb-4">
             {ticket.participants.map((p, i) => (
-              <span key={i} className="text-xs bg-dark-800/50 border border-dark-700/30 rounded-full px-3 py-1 text-dark-300">
+              <span key={i} className="text-xs bg-dark-800/50 border border-dark-700/30 rounded-full px-3 py-1.5 text-dark-300 flex items-center gap-2">
                 {p}
+                <button
+                  onClick={() => removeParticipant(p)}
+                  disabled={actionLoading}
+                  className="text-dark-500 hover:text-red-400 transition-colors"
+                >
+                  <UserMinus className="w-3 h-3" />
+                </button>
               </span>
             ))}
           </div>
+        ) : (
+          <p className="text-xs text-dark-500 mb-3">No participants yet</p>
+        )}
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={participantId}
+            onChange={(e) => setParticipantId(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addParticipant()}
+            placeholder="User ID to add..."
+            className="input-dark flex-1 text-sm"
+          />
+          <button
+            onClick={addParticipant}
+            disabled={!participantId.trim() || actionLoading}
+            className="btn-primary flex items-center gap-1.5 text-sm disabled:opacity-40"
+          >
+            <UserPlus className="w-4 h-4" />
+            Add
+          </button>
         </div>
-      )}
+      </div>
 
       {ticket.claimedBy && (
         <div className="glass p-6 animate-fade-in">

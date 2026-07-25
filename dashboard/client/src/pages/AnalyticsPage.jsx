@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
-import { BarChart3, TrendingUp, Clock, Users, MessageSquare } from 'lucide-react';
+import { BarChart3, TrendingUp, Clock, Users, MessageSquare, Crown } from 'lucide-react';
 
 export default function AnalyticsPage() {
   const [stats, setStats] = useState(null);
@@ -37,6 +37,10 @@ export default function AnalyticsPage() {
     );
   }
 
+  const maxDayCount = stats?.last7Days?.length
+    ? Math.max(...stats.last7Days.map((d) => d.count), 1)
+    : 1;
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -45,22 +49,22 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="stat-card">
+        <div className="stat-card" style={{ animationDelay: '0ms' }}>
           <MessageSquare className="w-5 h-5 text-ice-300 mb-1" />
           <p className="text-2xl font-bold text-dark-100">{stats?.total || 0}</p>
           <p className="text-sm text-dark-400">Total Tickets</p>
         </div>
-        <div className="stat-card">
+        <div className="stat-card" style={{ animationDelay: '50ms' }}>
           <BarChart3 className="w-5 h-5 text-green-400 mb-1" />
           <p className="text-2xl font-bold text-dark-100">{stats?.open || 0}</p>
           <p className="text-sm text-dark-400">Open</p>
         </div>
-        <div className="stat-card">
+        <div className="stat-card" style={{ animationDelay: '100ms' }}>
           <TrendingUp className="w-5 h-5 text-red-400 mb-1" />
           <p className="text-2xl font-bold text-dark-100">{stats?.closed || 0}</p>
           <p className="text-sm text-dark-400">Closed</p>
         </div>
-        <div className="stat-card">
+        <div className="stat-card" style={{ animationDelay: '150ms' }}>
           <Clock className="w-5 h-5 text-yellow-400 mb-1" />
           <p className="text-2xl font-bold text-dark-100">{formatMs(stats?.avgDuration)}</p>
           <p className="text-sm text-dark-400">Avg Duration</p>
@@ -68,7 +72,7 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="glass p-6">
+        <div className="glass p-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
           <h3 className="text-sm font-semibold text-dark-200 mb-4">By Department</h3>
           <div className="space-y-3">
             {(stats?.byDepartment || []).map((d) => {
@@ -79,7 +83,7 @@ export default function AnalyticsPage() {
                     <span className="text-dark-300">{DEPT_EMOJIS[d._id] || '🎫'} {DEPT_NAMES[d._id] || d._id}</span>
                     <span className="text-dark-400">{d.count} ({pct.toFixed(0)}%)</span>
                   </div>
-                  <div className="h-2 bg-dark-800 rounded-full overflow-hidden">
+                  <div className="h-2.5 bg-dark-800 rounded-full overflow-hidden">
                     <div className="h-full bg-ice-300/60 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
@@ -91,28 +95,85 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        <div className="glass p-6">
+        <div className="glass p-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
           <h3 className="text-sm font-semibold text-dark-200 mb-4">Last 7 Days</h3>
           {stats?.last7Days?.length > 0 ? (
-            <div className="space-y-2">
-              {stats.last7Days.map((d) => {
-                const maxCount = Math.max(...stats.last7Days.map(x => x.count));
-                const pct = maxCount > 0 ? (d.count / maxCount) * 100 : 0;
-                return (
-                  <div key={d._id} className="flex items-center gap-3">
-                    <span className="text-xs text-dark-500 w-20 text-right">{d._id.slice(5)}</span>
-                    <div className="flex-1 h-6 bg-dark-800 rounded-lg overflow-hidden">
-                      <div className="h-full bg-ice-300/40 rounded-lg transition-all duration-700 flex items-center px-2" style={{ width: `${Math.max(pct, 8)}%` }}>
-                        <span className="text-xs text-dark-200 font-medium">{d.count}</span>
+            <>
+              <div className="space-y-3">
+                {stats.last7Days.map((d) => {
+                  const pct = maxDayCount > 0 ? (d.count / maxDayCount) * 100 : 0;
+                  return (
+                    <div key={d._id} className="flex items-center gap-3">
+                      <span className="text-xs text-dark-500 w-20 text-right flex-shrink-0">
+                        {new Date(d._id).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </span>
+                      <div className="flex-1 h-10 bg-dark-800 rounded-xl overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-ice-300/40 to-ice-300/70 rounded-xl transition-all duration-700 flex items-center px-3"
+                          style={{ width: `${Math.max(pct, 10)}%` }}
+                        >
+                          <span className="text-xs text-dark-100 font-semibold">{d.count}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 pt-3 border-t border-dark-700/30 flex items-center justify-between text-xs text-dark-500">
+                <span>Total: {stats.last7Days.reduce((s, d) => s + d.count, 0)} tickets</span>
+                <span>Avg: {(stats.last7Days.reduce((s, d) => s + d.count, 0) / stats.last7Days.length).toFixed(1)}/day</span>
+              </div>
+            </>
           ) : (
             <p className="text-dark-500 text-sm text-center py-4">No data yet</p>
           )}
+        </div>
+      </div>
+
+      {stats?.topUsers?.length > 0 && (
+        <div className="glass p-6 animate-fade-in" style={{ animationDelay: '300ms' }}>
+          <div className="flex items-center gap-2 mb-4">
+            <Crown className="w-4 h-4 text-yellow-400" />
+            <h3 className="text-sm font-semibold text-dark-200">Top Users</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {stats.topUsers.map((u, i) => (
+              <div key={u._id || i} className="flex items-center gap-3 bg-dark-900/40 rounded-xl p-3 border border-dark-700/30">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                  i === 0 ? 'bg-yellow-400/20 text-yellow-400' :
+                  i === 1 ? 'bg-dark-400/20 text-dark-300' :
+                  'bg-orange-400/20 text-orange-400'
+                }`}>
+                  {i + 1}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-dark-200 font-medium truncate">{u.tag || u._id}</p>
+                  <p className="text-xs text-dark-500">{u.count} ticket{u.count !== 1 ? 's' : ''}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="glass p-4 animate-fade-in" style={{ animationDelay: '350ms' }}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+          <div>
+            <p className="text-lg font-bold text-dark-100">{stats?.total || 0}</p>
+            <p className="text-xs text-dark-500">Total</p>
+          </div>
+          <div>
+            <p className="text-lg font-bold text-green-400">{stats?.open || 0}</p>
+            <p className="text-xs text-dark-500">Open</p>
+          </div>
+          <div>
+            <p className="text-lg font-bold text-red-400">{stats?.closed || 0}</p>
+            <p className="text-xs text-dark-500">Closed</p>
+          </div>
+          <div>
+            <p className="text-lg font-bold text-ice-300">{stats?.topUsers?.length || 0}</p>
+            <p className="text-xs text-dark-500">Active Users</p>
+          </div>
         </div>
       </div>
     </div>

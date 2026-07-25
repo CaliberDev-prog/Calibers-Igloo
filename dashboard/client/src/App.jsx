@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth.jsx';
+import { ToastProvider } from './components/Toast.jsx';
 import Layout from './components/Layout.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
@@ -9,6 +10,8 @@ import AnalyticsPage from './pages/AnalyticsPage.jsx';
 import BlacklistsPage from './pages/BlacklistsPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import HealthPage from './pages/HealthPage.jsx';
+import MessagesPage from './pages/MessagesPage.jsx';
+import ServerPage from './pages/ServerPage.jsx';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -31,7 +34,8 @@ function LoadingScreen() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
@@ -43,9 +47,12 @@ export default function App() {
             <Route path="blacklists" element={<BlacklistsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="health" element={<HealthPage />} />
+            <Route path="messages" element={<MessagesPage />} />
+            <Route path="server" element={<ServerPage />} />
           </Route>
         </Routes>
-      </BrowserRouter>
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }

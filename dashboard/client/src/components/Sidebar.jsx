@@ -3,12 +3,15 @@ import { useAuth } from '../lib/auth.jsx';
 import {
   LayoutDashboard, Ticket, BarChart3, Shield, Settings,
   Activity, LogOut, Snowflake, ChevronLeft, ChevronRight,
+  MessageSquare, Server,
 } from 'lucide-react';
 import { useState } from 'react';
 
 const NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Overview' },
   { to: '/tickets', icon: Ticket, label: 'Tickets' },
+  { to: '/messages', icon: MessageSquare, label: 'Messages' },
+  { to: '/server', icon: Server, label: 'Server' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/blacklists', icon: Shield, label: 'Blacklists' },
   { to: '/health', icon: Activity, label: 'System' },

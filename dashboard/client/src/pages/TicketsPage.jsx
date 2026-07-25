@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api.js';
+import { useToast } from '../components/Toast.jsx';
 import {
   Search, Filter, ChevronLeft, ChevronRight, Ticket,
-  ArrowUpDown, ExternalLink, RefreshCw, X,
+  ArrowUpDown, ExternalLink, RefreshCw, X, Eye, XCircle,
 } from 'lucide-react';
 
 const DEPTS = {
@@ -20,6 +21,7 @@ const STATUS_COLORS = {
 };
 
 export default function TicketsPage() {
+  const { toast } = useToast();
   const [tickets, setTickets] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -28,6 +30,7 @@ export default function TicketsPage() {
   const [deptFilter, setDeptFilter] = useState('all');
   const [sort, setSort] = useState('createdAt');
   const [order, setOrder] = useState('desc');
+  const [closingId, setClosingId] = useState(null);
 
   const fetchTickets = useCallback(async (page = 1) => {
     setLoading(true);
@@ -50,6 +53,22 @@ export default function TicketsPage() {
   const toggleSort = (field) => {
     if (sort === field) setOrder(o => o === 'desc' ? 'asc' : 'desc');
     else { setSort(field); setOrder('desc'); }
+  };
+
+  const closeTicket = async (id) => {
+    setClosingId(id);
+    try {
+      await fetch(`/api/tickets/${id}/close`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      toast('Ticket closed', 'success');
+      fetchTickets(pagination.page);
+    } catch {
+      toast('Failed to close ticket', 'error');
+    }
+    setClosingId(null);
   };
 
   return (
@@ -107,7 +126,7 @@ export default function TicketsPage() {
       </div>
 
       <div className="glass overflow-hidden animate-fade-in">
-        <div className="grid grid-cols-[80px_120px_1fr_140px_140px_100px] gap-4 px-4 py-3 border-b border-dark-700/50 text-xs font-medium text-dark-500 uppercase tracking-wider">
+        <div className="grid grid-cols-[80px_110px_1fr_120px_120px_140px] gap-4 px-4 py-3 border-b border-dark-700/50 text-xs font-medium text-dark-500 uppercase tracking-wider">
           <button onClick={() => toggleSort('ticketId')} className="flex items-center gap-1 hover:text-dark-300">
             ID <ArrowUpDown className="w-3 h-3" />
           </button>
@@ -121,7 +140,7 @@ export default function TicketsPage() {
           <button onClick={() => toggleSort('closedAt')} className="flex items-center gap-1 hover:text-dark-300">
             Closed <ArrowUpDown className="w-3 h-3" />
           </button>
-          <span></span>
+          <span className="text-right">Actions</span>
         </div>
 
         {loading ? (
@@ -129,19 +148,19 @@ export default function TicketsPage() {
             <div className="w-8 h-8 border-2 border-ice-300/30 border-t-ice-300 rounded-full animate-spin" />
           </div>
         ) : tickets.length === 0 ? (
-          <div className="text-center py-12 text-dark-500">
-            <Ticket className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>No tickets found</p>
+          <div className="text-center py-16">
+            <Ticket className="w-14 h-14 mx-auto mb-4 opacity-20 text-dark-500" />
+            <p className="text-dark-400 text-sm font-medium">No tickets found</p>
+            <p className="text-dark-600 text-xs mt-1">Try adjusting your filters or search query</p>
           </div>
         ) : (
           <div className="divide-y divide-dark-700/20">
             {tickets.map((t) => {
               const dept = DEPTS[t.departmentId];
               return (
-                <Link
+                <div
                   key={t.ticketId}
-                  to={`/tickets/${t.ticketId}`}
-                  className="grid grid-cols-[80px_120px_1fr_140px_140px_100px] gap-4 px-4 py-3 hover:bg-dark-700/20 transition-colors items-center group"
+                  className="grid grid-cols-[80px_110px_1fr_120px_120px_140px] gap-4 px-4 py-3 hover:bg-dark-700/20 transition-colors items-center group"
                 >
                   <span className="text-sm font-mono font-medium text-dark-300">
                     #{String(t.ticketId).padStart(4, '0')}
@@ -155,11 +174,36 @@ export default function TicketsPage() {
                       <span className="text-sm text-dark-300 truncate">{dept?.name || t.departmentId}</span>
                     </div>
                     <p className="text-xs text-dark-500 truncate">{t.creatorTag || t.creatorId}</p>
+                    {t.creatorId && (
+                      <p className="text-xs text-dark-600 font-mono truncate">{t.creatorId}</p>
+                    )}
                   </div>
                   <span className="text-xs text-dark-500">{new Date(t.createdAt).toLocaleDateString()}</span>
                   <span className="text-xs text-dark-500">{t.closedAt ? new Date(t.closedAt).toLocaleDateString() : '-'}</span>
-                  <ExternalLink className="w-4 h-4 text-dark-600 opacity-0 group-hover:opacity-100 transition-opacity justify-self-end" />
-                </Link>
+                  <div className="flex items-center gap-2 justify-end">
+                    <Link
+                      to={`/tickets/${t.ticketId}`}
+                      className="btn-ghost p-1.5 text-dark-400 hover:text-ice-300"
+                      title="View ticket"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Link>
+                    {t.status === 'open' && (
+                      <button
+                        onClick={() => closeTicket(t.ticketId)}
+                        disabled={closingId === t.ticketId}
+                        className="btn-ghost p-1.5 text-dark-400 hover:text-red-400 disabled:opacity-40"
+                        title="Close ticket"
+                      >
+                        {closingId === t.ticketId ? (
+                          <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                        ) : (
+                          <XCircle className="w-4 h-4" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>
