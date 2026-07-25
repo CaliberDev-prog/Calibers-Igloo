@@ -3,6 +3,8 @@ import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { Shield, Search, Trash2, ChevronLeft, ChevronRight, X, Pencil } from 'lucide-react';
+import PageHeader from '../components/PageHeader.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 
 function EditBlacklistModal({ entry, onSave, onClose }) {
   const [reason, setReason] = useState(entry.reason || '');
@@ -131,10 +133,12 @@ export default function BlacklistsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-dark-100">Blacklists</h1>
-        <p className="text-dark-400 text-sm mt-1">{pagination.total} blacklisted user(s)</p>
-      </div>
+      <PageHeader
+        title="Blacklists"
+        subtitle={`${pagination.total} blacklisted user(s)`}
+        onRefresh={() => fetchEntries(pagination.page)}
+        refreshing={loading}
+      />
 
       <div className="glass p-4 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
@@ -176,13 +180,11 @@ export default function BlacklistsPage() {
             <div className="w-8 h-8 border-2 border-ice-300/30 border-t-ice-300 rounded-full animate-spin" />
           </div>
         ) : entries.length === 0 ? (
-          <div className="flex flex-col items-center py-16">
-            <div className="w-20 h-20 rounded-2xl bg-dark-800/40 border border-dark-700/30 flex items-center justify-center mb-6">
-              <Shield className="w-10 h-10 text-dark-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-dark-300 mb-2">No Blacklisted Users</h3>
-            <p className="text-sm text-dark-500">Everyone is behaving. Use !blacklist in Discord to add entries.</p>
-          </div>
+          <EmptyState
+            icon={Shield}
+            title="No Blacklisted Users"
+            description="Everyone is behaving. Use !blacklist in Discord to add entries."
+          />
         ) : (
           <div className="divide-y divide-dark-700/20">
             {entries.map((e) => (

@@ -5,6 +5,8 @@ import {
   Search, Filter, Clock, User, Hash, Shield, MessageSquare,
   ChevronLeft, ChevronRight, RefreshCw, X, FileText,
 } from 'lucide-react';
+import PageHeader from '../components/PageHeader.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 
 const CATEGORIES = {
   auth: { label: 'Auth', color: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
@@ -67,15 +69,12 @@ export default function AuditLogsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-dark-100">Audit Logs</h1>
-          <p className="text-dark-400 text-sm mt-1">{pagination.total} total entries</p>
-        </div>
-        <button onClick={() => fetchLogs(page)} className="btn-ghost flex items-center gap-2 text-sm">
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-        </button>
-      </div>
+      <PageHeader
+        title="Audit Logs"
+        subtitle={`${pagination.total} total entries`}
+        onRefresh={() => fetchLogs(page)}
+        refreshing={loading}
+      />
 
       <div className="glass p-4 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
@@ -108,13 +107,11 @@ export default function AuditLogsPage() {
             <div className="w-8 h-8 border-2 border-ice-300/30 border-t-ice-300 rounded-full animate-spin" />
           </div>
         ) : logs.length === 0 ? (
-          <div className="flex flex-col items-center py-16">
-            <div className="w-20 h-20 rounded-2xl bg-dark-800/40 border border-dark-700/30 flex items-center justify-center mb-6">
-              <FileText className="w-10 h-10 text-dark-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-dark-300 mb-2">No Audit Logs</h3>
-            <p className="text-sm text-dark-500">Actions will appear here as they happen</p>
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="No Audit Logs"
+            description="Actions will appear here as they happen"
+          />
         ) : (
           <div className="divide-y divide-dark-700/20">
             {logs.map((log) => {

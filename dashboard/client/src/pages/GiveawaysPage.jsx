@@ -4,23 +4,26 @@ import { useToast } from '../components/Toast.jsx';
 import {
   Gift, Clock, Users, Trophy, Plus, Calendar, Sparkles,
 } from 'lucide-react';
+import PageHeader from '../components/PageHeader.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 
 export default function GiveawaysPage() {
   const { toast } = useToast();
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const cfgData = await api.getConfig();
-        setConfig(cfgData?.settings || {});
-      } catch {
-        toast('Failed to load giveaway data', 'error');
-      }
-      setLoading(false);
-    })();
-  }, []);
+  const load = async () => {
+    setLoading(true);
+    try {
+      const cfgData = await api.getConfig();
+      setConfig(cfgData?.settings || {});
+    } catch {
+      toast('Failed to load giveaway data', 'error');
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
 
   if (loading) {
     return (
@@ -32,10 +35,12 @@ export default function GiveawaysPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-dark-100">Giveaways</h1>
-        <p className="text-dark-400 text-sm mt-1">Create and manage server giveaways</p>
-      </div>
+      <PageHeader
+        title="Giveaways"
+        subtitle="Create and manage server giveaways"
+        onRefresh={load}
+        refreshing={loading}
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="glass p-5">
@@ -77,16 +82,11 @@ export default function GiveawaysPage() {
         <div className="px-6 py-4 border-b border-dark-700/50 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-dark-200">Giveaway History</h3>
         </div>
-        <div className="flex flex-col items-center py-16">
-          <div className="w-20 h-20 rounded-2xl bg-dark-800/40 border border-dark-700/30 flex items-center justify-center mb-6">
-            <Gift className="w-10 h-10 text-dark-600" />
-          </div>
-          <h3 className="text-lg font-semibold text-dark-300 mb-2">Giveaway System Coming Soon</h3>
-          <p className="text-sm text-dark-500 max-w-sm text-center">
-            Giveaway management will be available once the giveaway module is added to the bot.
-            You'll be able to create, manage, and track giveaways from here.
-          </p>
-        </div>
+        <EmptyState
+          icon={Gift}
+          title="Giveaway System Coming Soon"
+          description="Giveaway management will be available once the giveaway module is added to the bot. You'll be able to create, manage, and track giveaways from here."
+        />
       </div>
 
       <div className="glass p-6">

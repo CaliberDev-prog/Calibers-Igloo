@@ -3,6 +3,7 @@ import { useAuth } from '../lib/auth.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { api } from '../lib/api.js';
 import { Terminal, Play, Clock, Trash2, Zap, AlertTriangle, Hash, ChevronDown } from 'lucide-react';
+import PageHeader from '../components/PageHeader.jsx';
 
 const QUICK_COMMANDS = [
   { label: '!help', command: '!help', args: '' },
@@ -119,15 +120,10 @@ export default function TerminalPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-ice-300/10 border border-ice-300/20 flex items-center justify-center">
-          <Terminal className="w-6 h-6 text-ice-300" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-dark-100">Command Terminal</h1>
-          <p className="text-sm text-dark-400">Send bot commands as messages in a channel</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Command Terminal"
+        subtitle="Send bot commands as messages in a channel"
+      />
 
       <div className="glass p-4 flex items-center gap-3">
         <Hash className="w-5 h-5 text-dark-500 flex-shrink-0" />

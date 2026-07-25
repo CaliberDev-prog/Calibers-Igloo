@@ -8,6 +8,7 @@ import {
   Pencil, Trash2, AlertTriangle, Radio, ChevronUp, ChevronDown,
 } from 'lucide-react';
 import ColorWheel from '../components/ColorWheel.jsx';
+import PageHeader from '../components/PageHeader.jsx';
 
 const CHANNEL_ICONS = { 0: Hash, 2: Volume2, 4: Megaphone, 5: Megaphone, 13: Radio, 15: Lock };
 const CHANNEL_TYPE_NAMES = { 0: 'Text', 2: 'Voice', 4: 'Announcement', 5: 'Stage', 13: 'Forum', 15: 'Channel' };
@@ -314,16 +315,12 @@ export default function ServerPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-dark-100">Server Explorer</h1>
-          <p className="text-dark-400 text-sm mt-1">Browse and manage channels & roles</p>
-        </div>
-        <button onClick={fetchAll} className="btn-ghost flex items-center gap-2 text-sm">
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
-      </div>
+      <PageHeader
+        title="Server Explorer"
+        subtitle="Browse and manage channels & roles"
+        onRefresh={fetchAll}
+        refreshing={loading}
+      />
 
       {guild && (
         <div className="glass p-6 flex items-center gap-4 animate-fade-in">

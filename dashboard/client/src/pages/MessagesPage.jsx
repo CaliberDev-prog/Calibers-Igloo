@@ -6,6 +6,7 @@ import {
   Hash, Send, Pencil, Trash2, Check, X, ChevronDown,
   MessageSquare, Image as ImageIcon, Loader2, AlertTriangle,
 } from 'lucide-react';
+import PageHeader from '../components/PageHeader.jsx';
 
 function MessageBubble({ msg, channelId, botId, onEdit, onDelete }) {
   const [editing, setEditing] = useState(false);
@@ -251,10 +252,10 @@ export default function MessagesPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-dark-100">Messages</h1>
-        <p className="text-dark-400 text-sm mt-1">View and manage channel messages</p>
-      </div>
+      <PageHeader
+        title="Messages"
+        subtitle="View and manage channel messages"
+      />
 
       <div className="glass p-4 flex items-center gap-3">
         <Hash className="w-5 h-5 text-dark-500" />

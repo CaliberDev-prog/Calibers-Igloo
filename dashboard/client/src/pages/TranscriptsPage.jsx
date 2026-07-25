@@ -6,6 +6,8 @@ import {
   Download, Eye, CheckCircle2, XCircle, Clock, User,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import PageHeader from '../components/PageHeader.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 
 const DEPTS = {
   general: { name: 'General Support', emoji: '🛟' },
@@ -48,15 +50,12 @@ export default function TranscriptsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-dark-100">Transcripts</h1>
-          <p className="text-dark-400 text-sm mt-1">{pagination.total} closed ticket(s) with transcripts</p>
-        </div>
-        <button onClick={() => fetchTickets(page)} className="btn-ghost flex items-center gap-2 text-sm">
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-        </button>
-      </div>
+      <PageHeader
+        title="Transcripts"
+        subtitle={`${pagination.total} closed ticket(s) with transcripts`}
+        onRefresh={() => fetchTickets(page)}
+        refreshing={loading}
+      />
 
       <div className="glass p-4 flex items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
@@ -83,13 +82,11 @@ export default function TranscriptsPage() {
             <div className="w-8 h-8 border-2 border-ice-300/30 border-t-ice-300 rounded-full animate-spin" />
           </div>
         ) : tickets.length === 0 ? (
-          <div className="flex flex-col items-center py-16">
-            <div className="w-20 h-20 rounded-2xl bg-dark-800/40 border border-dark-700/30 flex items-center justify-center mb-6">
-              <FileText className="w-10 h-10 text-dark-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-dark-300 mb-2">No Transcripts Yet</h3>
-            <p className="text-sm text-dark-500">Transcripts appear here when tickets are closed</p>
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="No Transcripts Yet"
+            description="Transcripts appear here when tickets are closed"
+          />
         ) : (
           <div className="divide-y divide-dark-700/20">
             {tickets.map((t) => {

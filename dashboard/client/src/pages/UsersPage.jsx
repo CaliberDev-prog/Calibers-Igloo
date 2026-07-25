@@ -5,6 +5,8 @@ import { useToast } from '../components/Toast.jsx';
 import {
   Users, UserPlus, Trash2, Shield, Pencil, AlertTriangle, Eye, EyeOff,
 } from 'lucide-react';
+import PageHeader from '../components/PageHeader.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 
 const ROLES = [
   { value: 'owner', label: 'Owner', desc: 'Full access to everything' },
@@ -208,17 +210,17 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-dark-100">Dashboard Users</h1>
-          <p className="text-dark-400 text-sm mt-1">{users.length} account(s)</p>
-        </div>
-        {isOwner && (
-          <button onClick={() => setCreating(true)} className="btn-primary flex items-center gap-2 text-sm">
-            <UserPlus className="w-4 h-4" /> Add User
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="Dashboard Users"
+        subtitle={`${users.length} account(s) with dashboard access`}
+        action={
+          isOwner ? (
+            <button onClick={() => setCreating(true)} className="btn-primary flex items-center gap-2 text-sm">
+              <UserPlus className="w-4 h-4" /> Add User
+            </button>
+          ) : null
+        }
+      />
 
       <div className="glass overflow-hidden">
         {loading ? (
@@ -226,13 +228,11 @@ export default function UsersPage() {
             <div className="w-8 h-8 border-2 border-ice-300/30 border-t-ice-300 rounded-full animate-spin" />
           </div>
         ) : users.length === 0 ? (
-          <div className="flex flex-col items-center py-16">
-            <div className="w-20 h-20 rounded-2xl bg-dark-800/40 border border-dark-700/30 flex items-center justify-center mb-6">
-              <Users className="w-10 h-10 text-dark-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-dark-300 mb-2">No Dashboard Users</h3>
-            <p className="text-sm text-dark-500">Create staff accounts to give team access</p>
-          </div>
+          <EmptyState
+            icon={Users}
+            title="No Dashboard Users"
+            description="Create staff accounts to give team access"
+          />
         ) : (
           <div className="divide-y divide-dark-700/20">
             {users.map((u) => (

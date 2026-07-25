@@ -34,10 +34,10 @@ function EditTicketModal({ ticket, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-dark-950/70 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="glass p-6 max-w-md w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-dark-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="glass p-6 max-w-md w-full space-y-4 animate-scale-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-ice-300/10 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-ice-300/10 ring-1 ring-ice-300/10 flex items-center justify-center">
             <Pencil className="w-5 h-5 text-ice-300" />
           </div>
           <div>
@@ -47,7 +47,7 @@ function EditTicketModal({ ticket, onSave, onClose }) {
         </div>
         <div className="space-y-3">
           <div>
-            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Department</label>
+            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1.5 block">Department</label>
             <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="input-dark text-sm">
               {Object.entries(DEPTS).map(([id, d]) => (
                 <option key={id} value={id}>{d.emoji} {d.name}</option>
@@ -55,15 +55,15 @@ function EditTicketModal({ ticket, onSave, onClose }) {
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Claimed By</label>
+            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1.5 block">Claimed By</label>
             <input type="text" value={claimedBy} onChange={(e) => setClaimedBy(e.target.value)} className="input-dark text-sm" placeholder="Staff member name" />
           </div>
           <div>
-            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Notes</label>
+            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1.5 block">Notes</label>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="input-dark text-sm min-h-[80px] resize-y" placeholder="Internal notes about this ticket..." />
           </div>
         </div>
-        <div className="flex justify-end gap-2 pt-2 border-t border-dark-700/30">
+        <div className="flex justify-end gap-2 pt-3 border-t border-dark-700/30">
           <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
           <button onClick={handleSave} disabled={saving} className="btn-primary text-sm disabled:opacity-50">{saving ? 'Saving...' : 'Save Changes'}</button>
         </div>
@@ -144,7 +144,7 @@ export default function TicketDetailPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <div className="w-8 h-8 border-2 border-ice-300/30 border-t-ice-300 rounded-full animate-spin" />
+        <div className="w-7 h-7 border-2 border-ice-300/20 border-t-ice-300 rounded-full animate-spin" />
       </div>
     );
   }
@@ -152,112 +152,107 @@ export default function TicketDetailPage() {
   if (!ticket) {
     return (
       <div className="text-center py-20">
-        <Ticket className="w-14 h-14 mx-auto mb-4 opacity-20 text-dark-500" />
-        <p className="text-dark-500">Ticket not found</p>
-        <Link to="/tickets" className="text-ice-300 text-sm mt-2 inline-block hover:underline">Back to tickets</Link>
+        <div className="w-16 h-16 rounded-2xl bg-dark-800/40 border border-dark-700/20 flex items-center justify-center mx-auto mb-4">
+          <Ticket className="w-8 h-8 text-dark-600" />
+        </div>
+        <p className="text-dark-400 text-sm font-medium">Ticket not found</p>
+        <Link to="/tickets" className="text-ice-300 text-xs mt-2 inline-flex items-center gap-1 hover:text-ice-200 transition-colors">
+          <ArrowLeft className="w-3 h-3" /> Back to tickets
+        </Link>
       </div>
     );
   }
 
   const dept = DEPTS[ticket.departmentId];
   const statusColors = {
-    open: 'bg-green-400/10 text-green-400 border-green-400/20',
-    closed: 'bg-red-400/10 text-red-400 border-red-400/20',
-    deleted: 'bg-dark-500/10 text-dark-500 border-dark-500/20',
+    open: 'badge bg-green-400/10 text-green-400 border-green-400/20',
+    closed: 'badge bg-red-400/10 text-red-400 border-red-400/20',
+    deleted: 'badge bg-dark-500/10 text-dark-500 border-dark-500/20',
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <Link to="/tickets" className="btn-ghost p-2">
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-dark-100">#{String(ticket.ticketId).padStart(4, '0')}</h1>
-            <span className={`text-xs px-3 py-1 rounded-full border ${statusColors[ticket.status] || statusColors.open}`}>
-              {ticket.status}
-            </span>
+            <h1 className="text-2xl font-bold text-dark-100 tracking-tight font-mono">#{String(ticket.ticketId).padStart(4, '0')}</h1>
+            <span className={statusColors[ticket.status] || statusColors.open}>{ticket.status}</span>
           </div>
           <p className="text-dark-400 text-sm mt-1">{dept?.emoji} {dept?.name || ticket.departmentId}</p>
         </div>
         <div className="flex items-center gap-2">
           {isOwner && (
-            <button onClick={() => setEditing(true)} className="btn-ghost flex items-center gap-2 text-sm">
-              <Pencil className="w-4 h-4" /> Edit
+            <button onClick={() => setEditing(true)} className="btn-ghost btn-sm">
+              <Pencil className="w-3.5 h-3.5" /> Edit
             </button>
           )}
           {ticket.status === 'open' && (
-            <button onClick={closeTicket} disabled={closing} className="btn-danger flex items-center gap-2 text-sm disabled:opacity-50">
-              {closing ? <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" /> : <XCircle className="w-4 h-4" />}
-              Close Ticket
+            <button onClick={closeTicket} disabled={closing} className="btn-danger btn-sm disabled:opacity-50">
+              {closing ? <div className="w-3.5 h-3.5 border-2 border-red-400/20 border-t-red-400 rounded-full animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+              Close
             </button>
           )}
           {ticket.channelId && (
-            <a href={`https://discord.com/channels/${ticket.guildId || '@me'}/${ticket.channelId}`} target="_blank" rel="noopener noreferrer" className="btn-ghost flex items-center gap-2 text-sm">
-              <Eye className="w-4 h-4" /> View Channel
+            <a href={`https://discord.com/channels/${ticket.guildId || '@me'}/${ticket.channelId}`} target="_blank" rel="noopener noreferrer" className="btn-ghost btn-sm">
+              <Eye className="w-3.5 h-3.5" /> View Channel
             </a>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="stat-card">
-          <User className="w-5 h-5 text-ice-300 mb-1" />
-          <p className="text-xs text-dark-500">Creator</p>
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-dark-200 font-medium truncate">{ticket.creatorTag || ticket.creatorId}</p>
-            <button onClick={copyId} className="text-dark-500 hover:text-dark-300 transition-colors">
-              {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-            </button>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { icon: User, label: 'Creator', value: ticket.creatorTag || ticket.creatorId, sub: ticket.creatorId, copyable: true },
+          { icon: Hash, label: 'Channel', value: ticket.channelId || 'N/A', mono: true },
+          { icon: Clock, label: 'Created', value: new Date(ticket.createdAt).toLocaleString() },
+          { icon: MessageSquare, label: 'Messages', value: `${(ticket.staffMessageCount || 0) + (ticket.userMessageCount || 0)}`, sub: `Staff: ${ticket.staffMessageCount || 0} · User: ${ticket.userMessageCount || 0}` },
+        ].map((item, i) => (
+          <div key={i} className="stat-card !p-4">
+            <item.icon className="w-4 h-4 text-ice-300/60 mb-2" />
+            <p className="text-[11px] text-dark-500 uppercase tracking-wider">{item.label}</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <p className={`text-sm text-dark-200 font-medium truncate ${item.mono ? 'font-mono' : ''}`}>{item.value}</p>
+              {item.copyable && (
+                <button onClick={copyId} className="text-dark-500 hover:text-dark-300 transition-colors">
+                  {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                </button>
+              )}
+            </div>
+            {item.sub && <p className="text-[11px] text-dark-600 font-mono mt-0.5 truncate">{item.sub}</p>}
           </div>
-          {ticket.creatorId && <p className="text-xs text-dark-600 font-mono mt-0.5">{ticket.creatorId}</p>}
-        </div>
-        <div className="stat-card">
-          <Hash className="w-5 h-5 text-ice-300 mb-1" />
-          <p className="text-xs text-dark-500">Channel ID</p>
-          <p className="text-sm text-dark-200 font-mono">{ticket.channelId || 'N/A'}</p>
-        </div>
-        <div className="stat-card">
-          <Clock className="w-5 h-5 text-ice-300 mb-1" />
-          <p className="text-xs text-dark-500">Created</p>
-          <p className="text-sm text-dark-200">{new Date(ticket.createdAt).toLocaleString()}</p>
-        </div>
-        <div className="stat-card">
-          <MessageSquare className="w-5 h-5 text-ice-300 mb-1" />
-          <p className="text-xs text-dark-500">Messages</p>
-          <p className="text-sm text-dark-200">{(ticket.staffMessageCount || 0) + (ticket.userMessageCount || 0)}</p>
-          <p className="text-xs text-dark-500">Staff: {ticket.staffMessageCount || 0} · User: {ticket.userMessageCount || 0}</p>
-        </div>
+        ))}
       </div>
 
       {ticket.notes && (
-        <div className="glass p-6 animate-fade-in">
-          <h3 className="text-sm font-semibold text-dark-200 mb-2">Notes</h3>
-          <p className="text-sm text-dark-300 whitespace-pre-wrap">{ticket.notes}</p>
+        <div className="glass p-5">
+          <h3 className="section-title">Notes</h3>
+          <p className="text-sm text-dark-300 whitespace-pre-wrap leading-relaxed">{ticket.notes}</p>
         </div>
       )}
 
       {ticket.answers && ticket.answers.length > 0 && (
-        <div className="glass p-6 animate-fade-in">
-          <h3 className="text-sm font-semibold text-dark-200 mb-4">Submitted Answers</h3>
-          <div className="space-y-3">
+        <div className="glass p-5">
+          <h3 className="section-title mb-4">Submitted Answers</h3>
+          <div className="space-y-2.5">
             {ticket.answers.map((a, i) => (
-              <div key={i} className="bg-dark-900/40 rounded-xl p-4 border border-dark-700/30">
-                <p className="text-xs text-dark-500 mb-1">{a.question || a.questionId}</p>
-                <p className="text-sm text-dark-200 whitespace-pre-wrap">{a.answer || '*No answer*'}</p>
+              <div key={i} className="bg-dark-900/40 rounded-xl p-4 border border-dark-700/20">
+                <p className="text-[11px] text-dark-500 uppercase tracking-wider mb-1">{a.question || a.questionId}</p>
+                <p className="text-sm text-dark-200 whitespace-pre-wrap leading-relaxed">{a.answer || '*No answer*'}</p>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <div className="glass p-6 animate-fade-in">
-        <h3 className="text-sm font-semibold text-dark-200 mb-3">Participants</h3>
+      <div className="glass p-5">
+        <h3 className="section-title">Participants</h3>
         {ticket.participants && ticket.participants.length > 0 ? (
           <div className="flex flex-wrap gap-2 mb-4">
             {ticket.participants.map((p, i) => (
-              <span key={i} className="text-xs bg-dark-800/50 border border-dark-700/30 rounded-full px-3 py-1.5 text-dark-300 flex items-center gap-2">
+              <span key={i} className="text-xs bg-dark-900/40 border border-dark-700/20 rounded-lg px-3 py-1.5 text-dark-300 flex items-center gap-2 font-mono">
                 {p}
                 <button onClick={() => removeParticipant(p)} disabled={actionLoading} className="text-dark-500 hover:text-red-400 transition-colors">
                   <UserMinus className="w-3 h-3" />
@@ -277,36 +272,36 @@ export default function TicketDetailPage() {
             placeholder="User ID to add..."
             className="input-dark flex-1 text-sm"
           />
-          <button onClick={addParticipant} disabled={!participantId.trim() || actionLoading} className="btn-primary flex items-center gap-1.5 text-sm disabled:opacity-40">
-            <UserPlus className="w-4 h-4" /> Add
+          <button onClick={addParticipant} disabled={!participantId.trim() || actionLoading} className="btn-primary btn-sm disabled:opacity-40">
+            <UserPlus className="w-3.5 h-3.5" /> Add
           </button>
         </div>
       </div>
 
       {ticket.claimedBy && (
-        <div className="glass p-6 animate-fade-in">
-          <h3 className="text-sm font-semibold text-dark-200 mb-2">Claimed By</h3>
-          <p className="text-sm text-dark-300">{ticket.claimedBy}</p>
+        <div className="glass p-5">
+          <h3 className="section-title">Claimed By</h3>
+          <p className="text-sm text-dark-200 font-medium">{ticket.claimedBy}</p>
         </div>
       )}
 
       {ticket.history && ticket.history.length > 0 && (
-        <div className="glass p-6 animate-fade-in">
-          <h3 className="text-sm font-semibold text-dark-200 mb-4">History</h3>
-          <div className="space-y-2">
+        <div className="glass p-5">
+          <h3 className="section-title mb-4">History</h3>
+          <div className="space-y-0">
             {ticket.history.slice().reverse().map((h, i) => (
-              <div key={i} className="flex items-center gap-3 py-2 border-b border-dark-700/20 last:border-0">
-                <div className="w-2 h-2 rounded-full bg-ice-300/40 flex-shrink-0" />
+              <div key={i} className="flex items-start gap-3 py-3 border-b border-dark-700/15 last:border-0">
+                <div className="w-2 h-2 rounded-full bg-ice-300/30 mt-1.5 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-dark-300">
                     <span className="text-dark-200 font-medium">{h.action?.replace(/_/g, ' ')}</span>
                     {h.performedBy && <span className="text-dark-500"> by {h.performedBy}</span>}
                   </p>
                   {h.oldValue && h.newValue && (
-                    <p className="text-xs text-dark-500">{h.oldValue} &rarr; {h.newValue}</p>
+                    <p className="text-xs text-dark-500 mt-0.5">{h.oldValue} → {h.newValue}</p>
                   )}
                 </div>
-                <span className="text-xs text-dark-600 flex-shrink-0">{new Date(h.timestamp).toLocaleString()}</span>
+                <span className="text-[11px] text-dark-600 flex-shrink-0 tabular-nums">{new Date(h.timestamp).toLocaleString()}</span>
               </div>
             ))}
           </div>

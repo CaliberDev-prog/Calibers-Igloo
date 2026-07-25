@@ -5,6 +5,7 @@ import { Settings, Ticket, MessageSquare, Shield, Bell, Hash, Snowflake, Lock, S
 import { useState, useEffect } from 'react';
 import ChannelSelector from '../components/ChannelSelector.jsx';
 import RoleSelector from '../components/RoleSelector.jsx';
+import PageHeader from '../components/PageHeader.jsx';
 
 const SECTIONS = [
   {
@@ -129,14 +130,10 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-dark-100">Settings</h1>
-          <p className="text-dark-400 text-sm mt-1">
-            {isOwner ? 'Full access - all settings editable' : 'View-only access'}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Settings"
+        subtitle={isOwner ? 'Full access — all settings editable' : 'View-only access'}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="glass p-2 h-fit">

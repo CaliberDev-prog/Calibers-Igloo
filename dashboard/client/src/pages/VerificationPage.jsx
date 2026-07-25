@@ -5,6 +5,8 @@ import {
   Lock, Shield, Clock, Users, Hash, CheckCircle2,
   AlertTriangle, Settings, RefreshCw,
 } from 'lucide-react';
+import PageHeader from '../components/PageHeader.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 
 export default function VerificationPage() {
   const { toast } = useToast();
@@ -13,23 +15,24 @@ export default function VerificationPage() {
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const [cfgData, chData, roleData] = await Promise.all([
-          api.getConfig(),
-          api.getChannels(),
-          api.getRoles(),
-        ]);
-        setConfig(cfgData?.settings || {});
-        setChannels(chData.channels || []);
-        setRoles(roleData.roles || []);
-      } catch {
-        toast('Failed to load verification data', 'error');
-      }
-      setLoading(false);
-    })();
-  }, []);
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [cfgData, chData, roleData] = await Promise.all([
+        api.getConfig(),
+        api.getChannels(),
+        api.getRoles(),
+      ]);
+      setConfig(cfgData?.settings || {});
+      setChannels(chData.channels || []);
+      setRoles(roleData.roles || []);
+    } catch {
+      toast('Failed to load verification data', 'error');
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
 
   const getChannelName = (id) => {
     if (!id) return 'Not set';
@@ -89,10 +92,12 @@ export default function VerificationPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-dark-100">Verification</h1>
-        <p className="text-dark-400 text-sm mt-1">Manage the server verification system</p>
-      </div>
+      <PageHeader
+        title="Verification"
+        subtitle="Manage the server verification system"
+        onRefresh={load}
+        refreshing={loading}
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="glass p-5">

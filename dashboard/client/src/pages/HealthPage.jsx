@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
 import { Activity, Database, Cpu, Clock, RefreshCw, Server, Zap, Globe } from 'lucide-react';
+import PageHeader from '../components/PageHeader.jsx';
 
 export default function HealthPage() {
   const [health, setHealth] = useState(null);
@@ -36,16 +37,12 @@ export default function HealthPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-dark-100">System Health</h1>
-          <p className="text-dark-400 text-sm mt-1">Bot and database status</p>
-        </div>
-        <button onClick={refresh} className="btn-ghost flex items-center gap-2 text-sm">
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
-      </div>
+      <PageHeader
+        title="System Health"
+        subtitle="Bot and database status"
+        onRefresh={refresh}
+        refreshing={loading}
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="stat-card">
