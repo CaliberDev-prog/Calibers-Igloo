@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { authenticate, requireOwner, requireStaff } from '../middleware/auth.js';
 import * as discord from '../services/discord.js';
+import AuditLog from '../models/AuditLog.js';
+import DashboardUser from '../models/DashboardUser.js';
 
 const router = Router();
 
@@ -10,8 +12,6 @@ const Ticket = mongoose.model('Ticket', new mongoose.Schema({}, { strict: false 
 const TicketBlacklist = mongoose.model('TicketBlacklist', new mongoose.Schema({}, { strict: false }));
 const Counter = mongoose.model('Counter', new mongoose.Schema({}, { strict: false }));
 const BotConfig = mongoose.model('BotConfig', new mongoose.Schema({}, { strict: false }));
-const AuditLog = mongoose.model('AuditLog', new mongoose.Schema({}, { strict: false }));
-const DashboardUser = mongoose.model('DashboardUser', new mongoose.Schema({}, { strict: false }));
 
 router.use(authenticate);
 
