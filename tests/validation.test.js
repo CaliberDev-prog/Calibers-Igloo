@@ -306,3 +306,137 @@ describe('Analytics date boundaries', () => {
     assert.equal(dayCount, 1);
   });
 });
+
+const DISCORD_ID_RE = /^\d{17,20}$/;
+const OBJECT_ID_RE = /^[0-9a-f]{24}$/i;
+
+function isDiscordId(value) {
+  return typeof value === 'string' && DISCORD_ID_RE.test(value);
+}
+
+function isObjectId(value) {
+  return typeof value === 'string' && OBJECT_ID_RE.test(value);
+}
+
+function parseTicketId(value) {
+  const n = parseInt(value, 10);
+  return Number.isNaN(n) || n < 1 ? null : n;
+}
+
+describe('isDiscordId', () => {
+  it('accepts valid 18-digit ID', () => {
+    assert.equal(isDiscordId('123456789012345678'), true);
+  });
+
+  it('accepts valid 19-digit ID', () => {
+    assert.equal(isDiscordId('1234567890123456789'), true);
+  });
+
+  it('accepts valid 20-digit ID', () => {
+    assert.equal(isDiscordId('12345678901234567890'), true);
+  });
+
+  it('rejects short IDs', () => {
+    assert.equal(isDiscordId('123456'), false);
+  });
+
+  it('rejects IDs with letters', () => {
+    assert.equal(isDiscordId('12345678901234567a'), false);
+  });
+
+  it('rejects empty string', () => {
+    assert.equal(isDiscordId(''), false);
+  });
+
+  it('rejects null', () => {
+    assert.equal(isDiscordId(null), false);
+  });
+
+  it('rejects undefined', () => {
+    assert.equal(isDiscordId(undefined), false);
+  });
+
+  it('rejects numbers', () => {
+    assert.equal(isDiscordId(123456789012345678), false);
+  });
+
+  it('rejects IDs with special characters', () => {
+    assert.equal(isDiscordId('12345678901234567!'), false);
+  });
+});
+
+describe('isObjectId', () => {
+  it('accepts valid 24-char hex ObjectId', () => {
+    assert.equal(isObjectId('507f1f77bcf86cd799439011'), true);
+  });
+
+  it('accepts uppercase hex', () => {
+    assert.equal(isObjectId('507F1F77BCF86CD799439011'), true);
+  });
+
+  it('rejects short strings', () => {
+    assert.equal(isObjectId('507f1f77bcf86cd79943901'), false);
+  });
+
+  it('rejects long strings', () => {
+    assert.equal(isObjectId('507f1f77bcf86cd7994390111'), false);
+  });
+
+  it('rejects non-hex characters', () => {
+    assert.equal(isObjectId('507f1f77bcf86cd7994390zz'), false);
+  });
+
+  it('rejects empty string', () => {
+    assert.equal(isObjectId(''), false);
+  });
+
+  it('rejects null', () => {
+    assert.equal(isObjectId(null), false);
+  });
+
+  it('rejects numbers', () => {
+    assert.equal(isObjectId(12345), false);
+  });
+
+  it('rejects Discord IDs', () => {
+    assert.equal(isObjectId('123456789012345678'), false);
+  });
+});
+
+describe('parseTicketId', () => {
+  it('parses valid ticket ID', () => {
+    assert.equal(parseTicketId('42'), 42);
+  });
+
+  it('parses ticket ID 1', () => {
+    assert.equal(parseTicketId('1'), 1);
+  });
+
+  it('returns null for NaN', () => {
+    assert.equal(parseTicketId('abc'), null);
+  });
+
+  it('returns null for 0', () => {
+    assert.equal(parseTicketId('0'), null);
+  });
+
+  it('returns null for negative', () => {
+    assert.equal(parseTicketId('-5'), null);
+  });
+
+  it('returns null for empty string', () => {
+    assert.equal(parseTicketId(''), null);
+  });
+
+  it('returns null for undefined', () => {
+    assert.equal(parseTicketId(undefined), null);
+  });
+
+  it('trims whitespace and parses', () => {
+    assert.equal(parseTicketId('  42  '), 42);
+  });
+
+  it('parses large ticket IDs', () => {
+    assert.equal(parseTicketId('999999'), 999999);
+  });
+});

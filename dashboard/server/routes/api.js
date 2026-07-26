@@ -5,6 +5,7 @@ import { authenticate, requireOwner, requireStaff, STAFF_ROLES, revokeAllUserTok
 import * as discord from '../services/discord.js';
 import AuditLog from '../models/AuditLog.js';
 import DashboardUser from '../models/DashboardUser.js';
+import { isDiscordId, isObjectId, parseTicketId } from '../utils/validation.js';
 
 const router = Router();
 
@@ -126,6 +127,7 @@ router.get('/channels', requireStaff, async (req, res) => {
 
 router.patch('/channels/:channelId', requireOwner, async (req, res) => {
   try {
+    if (!isDiscordId(req.params.channelId)) return res.status(400).json({ error: 'Invalid channel ID format' });
     const { name } = req.body;
     if (!name || typeof name !== 'string') return res.status(400).json({ error: 'Invalid channel name' });
     if (name.length > 100) return res.status(400).json({ error: 'Channel name too long (max 100)' });
@@ -189,6 +191,7 @@ router.get('/members', requireStaff, async (req, res) => {
 
 router.patch('/roles/:roleId', requireOwner, async (req, res) => {
   try {
+    if (!isDiscordId(req.params.roleId)) return res.status(400).json({ error: 'Invalid role ID format' });
     const { name, color } = req.body;
     const data = {};
     if (name && typeof name === 'string') data.name = name.slice(0, 100);
@@ -207,6 +210,7 @@ router.patch('/roles/:roleId', requireOwner, async (req, res) => {
 
 router.delete('/roles/:roleId', requireOwner, async (req, res) => {
   try {
+    if (!isDiscordId(req.params.roleId)) return res.status(400).json({ error: 'Invalid role ID format' });
     await discord.deleteRole(req.params.roleId);
     res.json({ success: true });
   } catch (err) {
@@ -324,7 +328,9 @@ router.get('/tickets/stats/overview', requireStaff, async (req, res) => {
 
 router.get('/tickets/:ticketId', requireStaff, async (req, res) => {
   try {
-    const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) }).lean();
+    const ticketId = parseTicketId(req.params.ticketId);
+    if (ticketId === null) return res.status(400).json({ error: 'Invalid ticket ID' });
+    const ticket = await Ticket.findOne({ ticketId }).lean();
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     res.json({ ticket });
   } catch (err) {
@@ -334,7 +340,9 @@ router.get('/tickets/:ticketId', requireStaff, async (req, res) => {
 
 router.get('/tickets/:ticketId/transcript', requireStaff, async (req, res) => {
   try {
-    const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) }).lean();
+    const ticketId = parseTicketId(req.params.ticketId);
+    if (ticketId === null) return res.status(400).json({ error: 'Invalid ticket ID' });
+    const ticket = await Ticket.findOne({ ticketId }).lean();
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     if (!ticket.transcript?.generated) return res.status(404).json({ error: 'No transcript available' });
     res.json({
@@ -362,7 +370,9 @@ router.get('/tickets/:ticketId/transcript', requireStaff, async (req, res) => {
 
 router.get('/tickets/:ticketId/transcript/download', requireStaff, async (req, res) => {
   try {
-    const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) }).lean();
+    const ticketId = parseTicketId(req.params.ticketId);
+    if (ticketId === null) return res.status(400).json({ error: 'Invalid ticket ID' });
+    const ticket = await Ticket.findOne({ ticketId }).lean();
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     if (!ticket.transcript?.generated) return res.status(404).json({ error: 'No transcript available' });
     const transcriptChannelId = process.env.TRANSCRIPT_CHANNEL_ID || process.env.LOG_CHANNEL_ID;
@@ -390,7 +400,9 @@ router.get('/tickets/:ticketId/transcript/download', requireStaff, async (req, r
 
 router.post('/tickets/:ticketId/close', requireStaff, async (req, res) => {
   try {
-    const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) });
+    const ticketId = parseTicketId(req.params.ticketId);
+    if (ticketId === null) return res.status(400).json({ error: 'Invalid ticket ID' });
+    const ticket = await Ticket.findOne({ ticketId });
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     if (ticket.status !== 'open') return res.status(400).json({ error: 'Ticket is not open' });
     
@@ -446,6 +458,7 @@ router.get('/blacklists', requireStaff, async (req, res) => {
 
 router.delete('/blacklists/:id', requireOwner, async (req, res) => {
   try {
+    if (!isObjectId(req.params.id)) return res.status(400).json({ error: 'Invalid ID format' });
     await TicketBlacklist.findByIdAndDelete(req.params.id);
     res.json({ success: true });
   } catch (err) {
@@ -486,6 +499,7 @@ router.post('/blacklists', requireOwner, async (req, res) => {
 
 router.get('/messages/:channelId', requireStaff, async (req, res) => {
   try {
+    if (!isDiscordId(req.params.channelId)) return res.status(400).json({ error: 'Invalid channel ID format' });
     const { before, limit = 50 } = req.query;
     const fetchLimit = Math.min(Math.max(parseInt(limit) || 1, 1), 100);
     const safeBefore = before && /^\d{17,20}$/.test(before) ? before : undefined;
@@ -498,6 +512,7 @@ router.get('/messages/:channelId', requireStaff, async (req, res) => {
 
 router.post('/messages/:channelId', requireStaff, async (req, res) => {
   try {
+    if (!isDiscordId(req.params.channelId)) return res.status(400).json({ error: 'Invalid channel ID format' });
     const { content, embed } = req.body;
     if (content && typeof content === 'string' && content.length > 2000) return res.status(400).json({ error: 'Message content too long (max 2000)' });
     const message = await discord.sendMessage(req.params.channelId, content, embed || undefined);
@@ -509,6 +524,8 @@ router.post('/messages/:channelId', requireStaff, async (req, res) => {
 
 router.patch('/messages/:channelId/:messageId', requireStaff, async (req, res) => {
   try {
+    if (!isDiscordId(req.params.channelId)) return res.status(400).json({ error: 'Invalid channel ID format' });
+    if (!isDiscordId(req.params.messageId)) return res.status(400).json({ error: 'Invalid message ID format' });
     const { content, embed } = req.body;
     const message = await discord.editMessage(req.params.channelId, req.params.messageId, content, embed || undefined);
     res.json({ message });
@@ -519,6 +536,8 @@ router.patch('/messages/:channelId/:messageId', requireStaff, async (req, res) =
 
 router.delete('/messages/:channelId/:messageId', requireStaff, async (req, res) => {
   try {
+    if (!isDiscordId(req.params.channelId)) return res.status(400).json({ error: 'Invalid channel ID format' });
+    if (!isDiscordId(req.params.messageId)) return res.status(400).json({ error: 'Invalid message ID format' });
     await discord.deleteMessage(req.params.channelId, req.params.messageId);
     res.json({ success: true });
   } catch (err) {
@@ -528,6 +547,7 @@ router.delete('/messages/:channelId/:messageId', requireStaff, async (req, res) 
 
 router.post('/messages/:channelId/embed', requireStaff, async (req, res) => {
   try {
+    if (!isDiscordId(req.params.channelId)) return res.status(400).json({ error: 'Invalid channel ID format' });
     const { embed } = req.body;
     const message = await discord.sendEmbed(req.params.channelId, embed);
     res.json({ message });
@@ -538,8 +558,10 @@ router.post('/messages/:channelId/embed', requireStaff, async (req, res) => {
 
 router.patch('/tickets/:ticketId', requireOwner, async (req, res) => {
   try {
+    const ticketId = parseTicketId(req.params.ticketId);
+    if (ticketId === null) return res.status(400).json({ error: 'Invalid ticket ID' });
     const { departmentId, notes, claimedBy } = req.body;
-    const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) });
+    const ticket = await Ticket.findOne({ ticketId });
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     if (departmentId !== undefined) ticket.departmentId = departmentId;
     if (notes !== undefined) ticket.notes = String(notes).slice(0, 5000);
@@ -554,6 +576,8 @@ router.patch('/tickets/:ticketId', requireOwner, async (req, res) => {
 
 router.post('/tickets/:ticketId/participants', requireStaff, async (req, res) => {
   try {
+    const ticketId = parseTicketId(req.params.ticketId);
+    if (ticketId === null) return res.status(400).json({ error: 'Invalid ticket ID' });
     const { userId } = req.body;
     if (!userId || !/^\d{17,20}$/.test(String(userId).trim())) return res.status(400).json({ error: 'Valid Discord user ID required' });
     const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) });
@@ -570,7 +594,10 @@ router.post('/tickets/:ticketId/participants', requireStaff, async (req, res) =>
 
 router.delete('/tickets/:ticketId/participants/:userId', requireStaff, async (req, res) => {
   try {
-    const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) });
+    const ticketId = parseTicketId(req.params.ticketId);
+    if (ticketId === null) return res.status(400).json({ error: 'Invalid ticket ID' });
+    if (!isDiscordId(req.params.userId)) return res.status(400).json({ error: 'Invalid user ID format' });
+    const ticket = await Ticket.findOne({ ticketId });
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     ticket.participants = (ticket.participants || []).filter(u => u !== req.params.userId);
     await ticket.save();
@@ -583,6 +610,7 @@ router.delete('/tickets/:ticketId/participants/:userId', requireStaff, async (re
 
 router.patch('/blacklists/:id', requireOwner, async (req, res) => {
   try {
+    if (!isObjectId(req.params.id)) return res.status(400).json({ error: 'Invalid ID format' });
     const { reason, departmentId } = req.body;
     const entry = await TicketBlacklist.findById(req.params.id);
     if (!entry) return res.status(404).json({ error: 'Blacklist entry not found' });
@@ -600,7 +628,7 @@ router.post('/commands/execute', requireOwner, async (req, res) => {
   try {
     const { command, args, channelId } = req.body;
     if (!command || typeof command !== 'string') return res.status(400).json({ error: 'command string is required' });
-    if (!channelId) return res.status(400).json({ error: 'channelId is required' });
+    if (!channelId || !isDiscordId(String(channelId).trim())) return res.status(400).json({ error: 'Valid channel ID is required' });
 
     const message = `${command} ${(args || []).join(' ')}`.trim();
     if (message.length > 2000) return res.status(400).json({ error: 'Message too long (max 2000 chars)' });
@@ -715,6 +743,7 @@ router.post('/giveaways', requireOwner, async (req, res) => {
 
 router.post('/giveaways/:id/end', requireOwner, async (req, res) => {
   try {
+    if (!isObjectId(req.params.id)) return res.status(400).json({ error: 'Invalid ID format' });
     const giveaway = await Giveaway.findById(req.params.id);
     if (!giveaway) return res.status(404).json({ error: 'Giveaway not found' });
     if (giveaway.status !== 'active') return res.status(400).json({ error: 'Giveaway is not active' });
@@ -757,6 +786,7 @@ router.post('/giveaways/:id/end', requireOwner, async (req, res) => {
 
 router.post('/giveaways/:id/reroll', requireOwner, async (req, res) => {
   try {
+    if (!isObjectId(req.params.id)) return res.status(400).json({ error: 'Invalid ID format' });
     const giveaway = await Giveaway.findById(req.params.id);
     if (!giveaway) return res.status(404).json({ error: 'Giveaway not found' });
     if (giveaway.status !== 'ended') return res.status(400).json({ error: 'Giveaway must be ended first' });
@@ -795,6 +825,7 @@ router.post('/giveaways/:id/reroll', requireOwner, async (req, res) => {
 
 router.delete('/giveaways/:id', requireOwner, async (req, res) => {
   try {
+    if (!isObjectId(req.params.id)) return res.status(400).json({ error: 'Invalid ID format' });
     const giveaway = await Giveaway.findByIdAndDelete(req.params.id);
     if (!giveaway) return res.status(404).json({ error: 'Giveaway not found' });
 
@@ -911,6 +942,7 @@ router.post('/users', requireOwner, async (req, res) => {
 
 router.patch('/users/:userId', requireOwner, async (req, res) => {
   try {
+    if (!isObjectId(req.params.userId)) return res.status(400).json({ error: 'Invalid user ID format' });
     const { role } = req.body;
     const user = await DashboardUser.findById(req.params.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -931,6 +963,7 @@ router.patch('/users/:userId', requireOwner, async (req, res) => {
 
 router.delete('/users/:userId', requireOwner, async (req, res) => {
   try {
+    if (!isObjectId(req.params.userId)) return res.status(400).json({ error: 'Invalid user ID format' });
     const user = await DashboardUser.findById(req.params.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.role === 'owner') return res.status(400).json({ error: 'Cannot delete owner' });

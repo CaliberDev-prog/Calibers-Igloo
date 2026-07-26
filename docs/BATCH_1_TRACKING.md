@@ -14,7 +14,7 @@
 | 2 | #15 | Session security best practices | **DONE** | #6 | Commit 7387b96 |
 | 3 | #14 | Auth to all protected routes | **DONE (no-code)** | #6 | Verified — tests prove it |
 | 4 | #12 | Bot command permission validation | **DONE** | #6 | Fixed 5 issues, 52 tests |
-| 5 | #1 | API input validation gaps | Pending | None | Partially done |
+| 5 | #1 | API input validation gaps | **DONE** | None | 22 endpoints validated, 28 tests |
 | 6 | #8 | NoSQL injection prevention | Pending | #1 | No mongo-sanitize |
 | 7 | #7 | XSS sanitization | Pending | None | No DOMPurify |
 | 8 | #9 | File upload / transcript security | Pending | #7 | Transcript CSP exists |
