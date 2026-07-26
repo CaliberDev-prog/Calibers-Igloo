@@ -4,7 +4,7 @@ import {
 import { getPrefix } from '../../services/prefixService.js';
 import { notifyOwner } from '../../services/ownerNotify.js';
 
-const OWNER_ID = '1293164546005012512';
+const OWNER_ID = process.env.OWNER_ID;
 const MOD_ROLES = ['1530531573332447324', '1530531568605597718'];
 const WARN_LOG_CHANNEL = '1530531653234200669';
 const ERROR_CHANNEL = '1530531650675413074';

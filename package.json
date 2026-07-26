@@ -8,7 +8,7 @@
     "start": "node src/index.js",
     "deploy": "node src/deploy-commands.js",
     "check": "node --check src/index.js && node --check src/services/setupService.js",
-    "test": "node --test tests/validation.test.js tests/auth.test.js tests/auth-middleware.test.js"
+    "test": "node --test tests/validation.test.js tests/auth.test.js tests/auth-middleware.test.js tests/permissions.test.js"
   },
   "engines": {
     "node": ">=22.12.0"

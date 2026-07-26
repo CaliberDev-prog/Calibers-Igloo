@@ -452,6 +452,8 @@ async function cmdUnblacklist(interaction) {
 }
 
 async function cmdStats(interaction) {
+  if (!isStaff(interaction.member)) return interaction.reply({ content: '❌ Staff only.', ephemeral: true });
+
   const department = interaction.options.getString('department');
 
   await interaction.deferReply({ ephemeral: true });
@@ -482,6 +484,10 @@ async function cmdStats(interaction) {
 }
 
 async function cmdClean(interaction) {
+  if (interaction.user.id !== process.env.OWNER_ID) {
+    return interaction.reply({ content: '❌ Owner only.', ephemeral: true });
+  }
+
   const ticketId = interaction.options.getString('ticket_id');
 
   await interaction.deferReply({ ephemeral: true });

@@ -13,7 +13,7 @@
 | 1 | #6 | Audit JWT authentication flow | **DONE** | None | Commit 36bfd2b |
 | 2 | #15 | Session security best practices | **DONE** | #6 | Commit 7387b96 |
 | 3 | #14 | Auth to all protected routes | **DONE (no-code)** | #6 | Verified — tests prove it |
-| 4 | #12 | Bot command permission validation | Pending | #6 | Needs per-command audit |
+| 4 | #12 | Bot command permission validation | **DONE** | #6 | Fixed 5 issues, 52 tests |
 | 5 | #1 | API input validation gaps | Pending | None | Partially done |
 | 6 | #8 | NoSQL injection prevention | Pending | #1 | No mongo-sanitize |
 | 7 | #7 | XSS sanitization | Pending | None | No DOMPurify |
@@ -53,7 +53,7 @@
 - Some endpoints missing channelId/ObjectId validation
 - Audit logging missing on channels, roles, messages, config
 - MongoDB connection missing TLS, pool limits, socket timeout
-- Bot commands need per-command permission audit
+- ~~Bot commands need per-command permission audit~~ **DONE in #12**
 
 ---
 
@@ -120,7 +120,7 @@
 | Some endpoints skip channelId validation | Medium | #1 | Pending |
 | MongoDB connection has no TLS | Low | #13 | Pending |
 | Missing audit logging on ~6 endpoint groups | Low | #11 | Pending |
-| Bot commands not audited for permissions | Medium | #12 | Pending |
+| Bot commands not audited for permissions | Medium | #12 | **FIXED in #12** |
 
 ---
 
@@ -131,7 +131,7 @@
 | #6 JWT | - | - | Pending |
 | #15 Session | - | - | Pending |
 | #14 Auth | - | - | Pending |
-| #12 Bot | - | - | Pending |
+| #12 Bot | 52 tests | - | Source code verified |
 | #1 Validation | - | - | Pending |
 | #8 NoSQL | - | - | Pending |
 | #7 XSS | - | - | Pending |

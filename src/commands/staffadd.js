@@ -11,7 +11,7 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction) {
-  const OWNER_ID = process.env.OWNER_ID || '1293164546005012512';
+  const OWNER_ID = process.env.OWNER_ID;
   if (interaction.user.id !== OWNER_ID) {
     return interaction.reply({ content: 'Owner only.', ephemeral: true });
   }
