@@ -252,6 +252,34 @@ router.get('/tickets/:ticketId', requireStaff, async (req, res) => {
   }
 });
 
+router.get('/tickets/:ticketId/transcript', requireStaff, async (req, res) => {
+  try {
+    const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) }).lean();
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+    if (!ticket.transcript?.generated) return res.status(404).json({ error: 'No transcript available' });
+    res.json({
+      transcript: ticket.transcript,
+      history: ticket.history || [],
+      answers: ticket.answers || [],
+      ticket: {
+        ticketId: ticket.ticketId,
+        departmentId: ticket.departmentId,
+        creatorTag: ticket.creatorTag,
+        creatorId: ticket.creatorId,
+        status: ticket.status,
+        createdAt: ticket.createdAt,
+        closedAt: ticket.closedAt,
+        closedBy: ticket.closedBy,
+        closeReason: ticket.closeReason,
+        staffMessageCount: ticket.staffMessageCount || 0,
+        userMessageCount: ticket.userMessageCount || 0,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch transcript' });
+  }
+});
+
 router.post('/tickets/:ticketId/close', requireStaff, async (req, res) => {
   try {
     const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) });
@@ -312,6 +340,36 @@ router.delete('/blacklists/:id', requireOwner, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to remove blacklist entry' });
+  }
+});
+
+router.post('/blacklists', requireOwner, async (req, res) => {
+  try {
+    const { userId, reason, departmentId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId is required' });
+    const entry = await TicketBlacklist.findOneAndUpdate(
+      { userId, departmentId: departmentId || 'global' },
+      {
+        userId,
+        departmentId: departmentId || 'global',
+        reason: reason || 'No reason provided',
+        addedBy: req.user.username,
+        active: true,
+      },
+      { upsert: true, new: true }
+    );
+    await AuditLog.create({
+      action: 'blacklist.add',
+      category: 'blacklists',
+      description: `Blacklisted user ${userId}`,
+      userId: req.user.id,
+      username: req.user.username,
+      target: userId,
+    }).catch(() => null);
+    res.json({ entry });
+  } catch (err) {
+    console.error('[API] Create blacklist error:', err);
+    res.status(500).json({ error: 'Failed to create blacklist entry' });
   }
 });
 
