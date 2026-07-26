@@ -21,7 +21,7 @@ import {
   handleReactionAdd,
   handleReactionRemove,
 } from './services/reactionRoleService.js';
-import { connectMongo } from './services/mongodb.js';
+import { connectMongo, isMongoConnected } from './services/mongodb.js';
 import { recordMessage, recoverTickets, autoCloseCheck } from './services/ticketService.js';
 import { ticketConfig } from './config/tickets.js';
 import { setClient } from './services/ownerNotify.js';
@@ -76,20 +76,24 @@ client.once(Events.ClientReady, async (readyClient) => {
       console.error('[ROLES] Setup failed:', err.message);
     });
 
-    await recoverTickets(guild).catch((err) => {
-      console.error('[TICKETS] Recovery failed:', err.message);
-    });
-
-    await handleInviteTracking(guild).catch((err) => {
-      console.error('[INVITES] Cache setup failed:', err.message);
-    });
-
-    autoCloseInterval = setInterval(() => {
-      autoCloseCheck(guild).catch((err) => {
-        console.error('[AUTOCLOSE] Check failed:', err.message);
+    if (isMongoConnected()) {
+      await recoverTickets(guild).catch((err) => {
+        console.error('[TICKETS] Recovery failed:', err.message);
       });
-    }, 60 * 60 * 1000);
-    autoCloseCheck(guild).catch(() => null);
+
+      await handleInviteTracking(guild).catch((err) => {
+        console.error('[INVITES] Cache setup failed:', err.message);
+      });
+
+      autoCloseInterval = setInterval(() => {
+        autoCloseCheck(guild).catch((err) => {
+          console.error('[AUTOCLOSE] Check failed:', err.message);
+        });
+      }, 60 * 60 * 1000);
+      autoCloseCheck(guild).catch(() => null);
+    } else {
+      console.warn('[STARTUP] MongoDB not connected. Recovery, invites, and auto-close skipped.');
+    }
   }
 });
 
