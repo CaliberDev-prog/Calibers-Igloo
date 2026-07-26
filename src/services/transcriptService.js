@@ -465,6 +465,17 @@ function buildFilename(ticket, dept) {
   return `ticket-${String(ticket.ticketId).padStart(4, '0')}-${deptSlug}-${creatorSlug}.html`;
 }
 
+function sanitizeFilename(name) {
+  return String(name || 'transcript.html')
+    .replace(/\0/g, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/\.{2,}/g, '.')
+    .replace(/^\.+/, '')
+    .replace(/\.html$/i, '')
+    .concat('.html')
+    .slice(0, 100);
+}
+
 export async function generateTranscript(channel, { staff = true } = {}) {
   if (!isMongoConnected()) throw new Error('Database not connected');
 
@@ -491,6 +502,12 @@ export async function generateTranscript(channel, { staff = true } = {}) {
 
   const html = buildFullHtml(ticket, messages, channel.guild, staff);
   const buffer = Buffer.from(html, 'utf-8');
+
+  const MAX_BUFFER_BYTES = 7.5 * 1024 * 1024;
+  if (buffer.length > MAX_BUFFER_BYTES) {
+    throw new Error(`Transcript too large (${(buffer.length / 1024 / 1024).toFixed(1)}MB). Max is 7.5MB.`);
+  }
+
   const filename = buildFilename(ticket, dept);
   const attachment = new AttachmentBuilder(buffer, { name: filename });
 

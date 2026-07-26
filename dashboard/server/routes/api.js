@@ -382,15 +382,37 @@ router.get('/tickets/:ticketId/transcript/download', requireStaff, async (req, r
     const message = await discord.getMessage(transcriptChannelId, ticket.transcript.logMessageId);
     const attachment = message.attachments?.[0];
     if (!attachment) return res.status(404).json({ error: 'Transcript file not found' });
-    const fetchRes = await fetch(attachment.url);
+
+    const MAX_TRANSCRIPT_BYTES = 5 * 1024 * 1024;
+    if (attachment.size > MAX_TRANSCRIPT_BYTES) {
+      return res.status(413).json({ error: 'Transcript file too large' });
+    }
+
+    const fetchRes = await fetch(attachment.url, { signal: AbortSignal.timeout(10000) });
     if (!fetchRes.ok) return res.status(500).json({ error: 'Failed to fetch transcript file' });
+
+    const contentLength = fetchRes.headers.get('content-length');
+    if (contentLength && parseInt(contentLength, 10) > MAX_TRANSCRIPT_BYTES) {
+      return res.status(413).json({ error: 'Transcript file too large' });
+    }
+
     const html = await fetchRes.text();
+    if (Buffer.byteLength(html, 'utf-8') > MAX_TRANSCRIPT_BYTES) {
+      return res.status(413).json({ error: 'Transcript file too large' });
+    }
+
     const safeFilename = (ticket.transcript.filename || 'transcript.html')
+      .replace(/\0/g, '')
       .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .replace(/\.{2,}/g, '.')
+      .replace(/^\.+/, '')
       .slice(0, 100);
-    res.setHeader('Content-Type', 'text/html');
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Content-Security-Policy', "sandbox allow-forms allow-scripts; object-src 'none';");
     res.setHeader('Content-Disposition', `inline; filename="${safeFilename}"`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'private, no-store');
     res.send(html);
   } catch (err) {
     console.error('[API] Transcript download error:', err);

@@ -17,7 +17,7 @@
 | 5 | #1 | API input validation gaps | **DONE** | None | 22 endpoints validated, 28 tests |
 | 6 | #8 | NoSQL injection prevention | **DONE** | #1 | mongo-sanitize middleware, 26 tests |
 | 7 | #7 | XSS sanitization | **DONE** | None | TreeWalker search fix, CSP meta, URL validation, 59 tests |
-| 8 | #9 | File upload / transcript security | Pending | #7 | Transcript CSP exists |
+| 8 | #9 | File upload / transcript security | **DONE** | #7 | 5MB size limit, nosniff, filename hardening, 35 tests |
 | 9 | #3 | Harden CORS | Pending | None | Already done — may close |
 | 10 | #4 | Harden security headers | Pending | None | Already done via helmet |
 | 11 | #5 | CSRF protection | Pending | #3 | Not implemented |
