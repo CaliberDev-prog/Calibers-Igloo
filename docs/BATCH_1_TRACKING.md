@@ -11,7 +11,7 @@
 | # | GitHub | Issue | Status | Dependencies | Findings |
 |---|--------|-------|--------|-------------|----------|
 | 1 | #6 | Audit JWT authentication flow | **DONE** | None | Commit 36bfd2b |
-| 2 | #15 | Session security best practices | Pending | #6 | JWT refresh tokens |
+| 2 | #15 | Session security best practices | **DONE** | #6 | Commit 7387b96 |
 | 3 | #14 | Auth to all protected routes | Pending | #6 | Mostly done already |
 | 4 | #12 | Bot command permission validation | Pending | #6 | Needs per-command audit |
 | 5 | #1 | API input validation gaps | Pending | None | Partially done |
@@ -46,7 +46,7 @@
 ### What Needs Work
 - ~~JWT expiry too long (7d → 24h)~~ **DONE in #6**
 - ~~No refresh token pattern~~ **DONE in #6**
-- No token revocation/blacklist (future improvement)
+- ~~No token revocation/blacklist~~ **DONE in #15**
 - No CSRF tokens (SameSite=lax only)
 - No mongo-sanitize middleware
 - No DOMPurify for transcript rendering
@@ -109,18 +109,18 @@
 
 ## Security Findings Discovered During Analysis
 
-| Finding | Severity | Issue |
-|---------|----------|-------|
-| JWT expiry is 7 days (should be 24h) | High | #15 |
-| No refresh token mechanism | High | #15 |
-| No token revocation (logout just clears cookie) | High | #15 |
-| No CSRF tokens on state-changing endpoints | Medium | #5 |
-| No mongo-sanitize on request bodies | Medium | #8 |
-| Transcript uses dangerouslySetInnerHTML without DOMPurify | Medium | #7 |
-| Some endpoints skip channelId validation | Medium | #1 |
-| MongoDB connection has no TLS | Low | #13 |
-| Missing audit logging on ~6 endpoint groups | Low | #11 |
-| Bot commands not audited for permissions | Medium | #12 |
+| Finding | Severity | Issue | Status |
+|---------|----------|-------|--------|
+| JWT expiry is 7 days (should be 24h) | High | #15 | **FIXED in #6** |
+| No refresh token mechanism | High | #15 | **FIXED in #6** |
+| No token revocation (logout just clears cookie) | High | #15 | **FIXED in #15** |
+| No CSRF tokens on state-changing endpoints | Medium | #5 | Pending |
+| No mongo-sanitize on request bodies | Medium | #8 | Pending |
+| Transcript uses dangerouslySetInnerHTML without DOMPurify | Medium | #7 | Pending |
+| Some endpoints skip channelId validation | Medium | #1 | Pending |
+| MongoDB connection has no TLS | Low | #13 | Pending |
+| Missing audit logging on ~6 endpoint groups | Low | #11 | Pending |
+| Bot commands not audited for permissions | Medium | #12 | Pending |
 
 ---
 
