@@ -1,7 +1,13 @@
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'calibers-igloo-dashboard-jwt-secret';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('[AUTH] FATAL: Missing JWT_SECRET environment variable');
+  process.exit(1);
+}
+
 const OWNER_ID = process.env.OWNER_ID || '1293164546005012512';
+const STAFF_ROLES = ['owner', 'developer', 'manager', 'moderator', 'support', 'analyst'];
 
 export function authenticate(req, res, next) {
   const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
@@ -12,18 +18,19 @@ export function authenticate(req, res, next) {
     req.user = decoded;
     next();
   } catch {
-    return res.status(401).json({ error: 'Invalid token' });
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
 
 export function requireOwner(req, res, next) {
-  if (req.user.id !== OWNER_ID) return res.status(403).json({ error: 'Owner only' });
+  if (req.user.role !== 'owner') return res.status(403).json({ error: 'Owner access required' });
   next();
 }
 
 export function requireStaff(req, res, next) {
-  if (req.user.role === 'owner') return next();
-  if (req.user.role !== 'staff') return res.status(403).json({ error: 'Staff only' });
+  if (!req.user || !STAFF_ROLES.includes(req.user.role)) {
+    return res.status(403).json({ error: 'Staff access required' });
+  }
   next();
 }
 

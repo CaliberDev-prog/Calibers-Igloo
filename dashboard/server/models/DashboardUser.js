@@ -1,21 +1,24 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcrypt';
+import bcryptjs from 'bcryptjs';
 
 const schema = new mongoose.Schema({
   userId: { type: String, required: true, unique: true },
-  username: { type: String, required: true, unique: true },
+  username: { type: String, required: true, unique: true, lowercase: true, trim: true },
   passwordHash: { type: String, required: true },
-  role: { type: String, enum: ['owner', 'staff'], default: 'staff' },
-  createdAt: { type: Date, default: Date.now },
-});
+  role: {
+    type: String,
+    enum: ['owner', 'developer', 'manager', 'moderator', 'support', 'analyst'],
+    default: 'support',
+  },
+}, { timestamps: true });
 
-schema.methods.checkPassword = function (plain) {
-  return bcrypt.compare(plain, this.passwordHash);
+schema.methods.checkPassword = async function (plain) {
+  return bcryptjs.compare(plain, this.passwordHash);
 };
 
-schema.statics.createUser = async function (userId, username, password) {
-  const passwordHash = await bcrypt.hash(password, 12);
-  return this.create({ userId, username, passwordHash });
+schema.statics.createUser = async function (userId, username, password, role = 'support') {
+  const passwordHash = await bcryptjs.hash(password, 12);
+  return this.create({ userId, username: username.toLowerCase(), passwordHash, role });
 };
 
 export default mongoose.model('DashboardUser', schema);

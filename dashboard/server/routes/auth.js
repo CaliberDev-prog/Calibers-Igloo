@@ -52,7 +52,7 @@ router.get('/me', async (req, res) => {
 
   try {
     const jwt = await import('jsonwebtoken');
-    const decoded = jwt.default.verify(token, process.env.JWT_SECRET || 'calibers-igloo-dashboard-jwt-secret');
+    const decoded = jwt.default.verify(token, process.env.JWT_SECRET);
     res.json({ user: decoded });
   } catch {
     res.status(401).json({ error: 'Invalid token' });

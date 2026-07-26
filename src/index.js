@@ -62,8 +62,11 @@ for (const cmd of modSlashCommands) {
 }
 client.commands.set(staffaddCommand.data.name, staffaddCommand);
 
+let autoCloseInterval = null;
+
 client.once(Events.ClientReady, async (readyClient) => {
-  console.log(`Logged in as ${readyClient.user.tag}`);
+  console.log(`[STARTUP] Logged in as ${readyClient.user.tag}`);
+  console.log(`[STARTUP] Node ${process.version}`);
 
   setClient(readyClient);
 
@@ -81,7 +84,7 @@ client.once(Events.ClientReady, async (readyClient) => {
       console.error('[INVITES] Cache setup failed:', err.message);
     });
 
-    setInterval(() => {
+    autoCloseInterval = setInterval(() => {
       autoCloseCheck(guild).catch((err) => {
         console.error('[AUTOCLOSE] Check failed:', err.message);
       });
@@ -104,11 +107,6 @@ client.on(Events.MessageCreate, async (message) => {
     await recordMessage(message);
   }
 
-  if (message.content.startsWith('!')) {
-    await handleRolesFix(message);
-    await handleRules(message);
-  }
-
   const prefix = getPrefix();
   const botMention = `<@${client.user.id}>`;
   const botMentionNick = `<@!${client.user.id}>`;
@@ -129,6 +127,8 @@ client.on(Events.MessageCreate, async (message) => {
     if (command === 'purge') return handlePurgeCommand(message, args);
     if (command === 'warning' || command === 'warn') return handleWarningCommand(message, args);
     if (command === 'slowmode') return handleSlowmodeCommand(message, args);
+    if (command === 'rolesfix') return handleRolesFix(message);
+    if (command === 'rules') return handleRules(message);
   }
 });
 
@@ -143,5 +143,27 @@ client.on(Events.MessageReactionAdd, handleReactionAdd);
 client.on(Events.MessageReactionRemove, handleReactionRemove);
 
 client.on(Events.Error, console.error);
+
+function shutdown(signal) {
+  console.log(`[SHUTDOWN] Received ${signal}. Shutting down gracefully...`);
+  if (autoCloseInterval) clearInterval(autoCloseInterval);
+  client.destroy().catch(() => null);
+  import('mongoose').then((mongoose) => {
+    mongoose.default.disconnect().then(() => {
+      console.log('[SHUTDOWN] Clean shutdown complete.');
+      process.exit(0);
+    });
+  }).catch(() => process.exit(0));
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('unhandledRejection', (err) => {
+  console.error('[ERROR] Unhandled rejection:', err);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[CRITICAL] Uncaught exception:', err);
+  shutdown('uncaughtException');
+});
 
 await client.login(process.env.DISCORD_TOKEN);

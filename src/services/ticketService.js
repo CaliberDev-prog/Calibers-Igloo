@@ -832,37 +832,43 @@ export async function purgeMessages(channel, count, purgedBy) {
 export async function recordMessage(message) {
   if (!isMongoConnected()) return;
 
-  const ticket = await Ticket.findOne({ channelId: message.channel.id, status: { $in: ['open', 'closing'] } });
+  const ticket = await Ticket.findOne({ channelId: message.channel.id, status: { $in: ['open', 'closing'] } }).lean();
   if (!ticket) return;
 
   const member = message.member;
   const staffMember = member ? isStaff(member) : false;
 
+  const setFields = {};
   if (staffMember && !ticket.firstStaffResponseAt) {
-    ticket.firstStaffResponseAt = new Date();
-    ticket.firstStaffResponderId = message.author.id;
+    setFields.firstStaffResponseAt = new Date();
+    setFields.firstStaffResponderId = message.author.id;
   }
 
+  const incFields = {};
   if (staffMember) {
-    ticket.staffMessageCount = (ticket.staffMessageCount || 0) + 1;
+    incFields.staffMessageCount = 1;
   } else {
-    ticket.userMessageCount = (ticket.userMessageCount || 0) + 1;
-    ticket.lastUserMessageAt = new Date();
-    ticket.autoCloseWarned = false;
+    incFields.userMessageCount = 1;
+    setFields.lastUserMessageAt = new Date();
+    setFields.autoCloseWarned = false;
   }
 
-  ticket.history.push({
-    action: 'message_recorded',
-    performedBy: message.author.tag || message.author.username,
-    newValue: message.content || '[No text content]',
-    timestamp: new Date(),
-  });
+  const update = {};
+  if (Object.keys(setFields).length > 0) update.$set = setFields;
+  if (Object.keys(incFields).length > 0) update.$inc = incFields;
+  update.$push = {
+    history: {
+      $each: [{
+        action: 'message_recorded',
+        performedBy: message.author.tag || message.author.username,
+        newValue: (message.content || '').slice(0, 200) || '[No text content]',
+        timestamp: new Date(),
+      }],
+      $slice: -500,
+    },
+  };
 
-  if (ticket.history.length > 1000) {
-    ticket.history = ticket.history.slice(-800);
-  }
-
-  await ticket.save();
+  await Ticket.findOneAndUpdate({ _id: ticket._id }, update).catch(() => null);
 }
 
 export async function getStats(guildId, filters = {}) {
@@ -873,13 +879,34 @@ export async function getStats(guildId, filters = {}) {
   if (filters.creatorId) match.creatorId = filters.creatorId;
   if (filters.status) match.status = filters.status;
 
-  const total = await Ticket.countDocuments(match);
-  const open = await Ticket.countDocuments({ ...match, status: 'open' });
-  const closed = await Ticket.countDocuments({ ...match, status: 'closed' });
+  const aggResult = await Ticket.aggregate([
+    { $match: match },
+    {
+      $facet: {
+        totals: [
+          { $group: { _id: '$status', count: { $sum: 1 } } },
+        ],
+        byDepartment: [
+          { $match: { status: 'open' } },
+          { $group: { _id: '$departmentId', count: { $sum: 1 } } },
+        ],
+      },
+    },
+  ]);
+
+  const facet = aggResult[0] || { totals: [], byDepartment: [] };
+  const statusCounts = {};
+  for (const doc of facet.totals) {
+    statusCounts[doc._id] = doc.count;
+  }
+
+  const total = Object.values(statusCounts).reduce((sum, c) => sum + c, 0);
+  const open = statusCounts.open || 0;
+  const closed = statusCounts.closed || 0;
 
   const byDepartment = {};
-  for (const dept of Object.keys(ticketConfig.departments)) {
-    byDepartment[dept] = await Ticket.countDocuments({ ...match, departmentId: dept, status: 'open' });
+  for (const doc of facet.byDepartment) {
+    byDepartment[doc._id] = doc.count;
   }
 
   return { total, open, closed, byDepartment };
@@ -890,12 +917,14 @@ export async function recoverTickets(guild) {
 
   const stuck = await Ticket.find({ status: { $in: ['creating', 'closing'] } }).catch(() => []);
   for (const ticket of stuck) {
-    ticket.status = ticket.status === 'creating' ? 'open' : 'closed';
+    const oldStatus = ticket.status;
+    const newStatus = oldStatus === 'creating' ? 'open' : 'closed';
+    ticket.status = newStatus;
     ticket.history.push({
       action: 'status_recovered',
       performedBy: 'System',
-      oldValue: ticket.status === 'open' ? 'creating' : 'closing',
-      newValue: ticket.status,
+      oldValue: oldStatus,
+      newValue: newStatus,
       reason: 'Bot restart recovery',
       timestamp: new Date(),
     });

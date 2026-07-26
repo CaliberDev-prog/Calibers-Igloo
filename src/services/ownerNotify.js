@@ -1,6 +1,6 @@
 import { EmbedBuilder } from 'discord.js';
 
-const OWNER_ID = '1293164546005012512';
+const OWNER_ID = process.env.OWNER_ID || '1293164546005012512';
 
 let alertsEnabled = true;
 let cachedClient = null;

@@ -13,6 +13,17 @@ const TicketBlacklist = mongoose.model('TicketBlacklist', new mongoose.Schema({}
 const Counter = mongoose.model('Counter', new mongoose.Schema({}, { strict: false }));
 const BotConfig = mongoose.model('BotConfig', new mongoose.Schema({}, { strict: false }));
 
+function sanitizeSearch(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').slice(0, 100);
+}
+
+function parsePagination(query) {
+  const page = Math.max(1, parseInt(query.page) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(query.limit) || 25));
+  return { page, limit, skip: (page - 1) * limit };
+}
+
 router.use(authenticate);
 
 router.get('/overview', requireStaff, async (req, res) => {
@@ -172,24 +183,29 @@ router.patch('/roles-reorder', requireOwner, async (req, res) => {
 
 router.get('/tickets', requireStaff, async (req, res) => {
   try {
-    const { status, department, search, page = 1, limit = 25, sort = 'createdAt', order = 'desc' } = req.query;
+    const { status, department, search, sort = 'createdAt', order = 'desc' } = req.query;
+    const { page, limit, skip } = parsePagination(req.query);
     const filter = {};
     if (status && status !== 'all') filter.status = status;
     if (department && department !== 'all') filter.departmentId = department;
     if (search) {
-      filter.$or = [
-        { channelId: { $regex: search, $options: 'i' } },
-        { creatorId: { $regex: search, $options: 'i' } },
-        { creatorTag: { $regex: search, $options: 'i' } },
-      ];
+      const safeSearch = sanitizeSearch(search);
+      if (safeSearch) {
+        filter.$or = [
+          { channelId: { $regex: safeSearch, $options: 'i' } },
+          { creatorId: { $regex: safeSearch, $options: 'i' } },
+          { creatorTag: { $regex: safeSearch, $options: 'i' } },
+        ];
+      }
     }
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const sortObj = { [sort]: order === 'desc' ? -1 : 1 };
+    const validSorts = ['createdAt', 'ticketId', 'status', 'departmentId', 'closedAt'];
+    const sortField = validSorts.includes(sort) ? sort : 'createdAt';
+    const sortObj = { [sortField]: order === 'asc' ? 1 : -1 };
     const [tickets, total] = await Promise.all([
-      Ticket.find(filter).sort(sortObj).skip(skip).limit(parseInt(limit)).lean(),
+      Ticket.find(filter).sort(sortObj).skip(skip).limit(limit).lean(),
       Ticket.countDocuments(filter),
     ]);
-    res.json({ tickets, pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) } });
+    res.json({ tickets, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
   } catch (err) {
     console.error('[API] Tickets error:', err);
     res.status(500).json({ error: 'Failed to fetch tickets' });
@@ -241,31 +257,50 @@ router.post('/tickets/:ticketId/close', requireStaff, async (req, res) => {
     const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) });
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     if (ticket.status !== 'open') return res.status(400).json({ error: 'Ticket is not open' });
+    
     if (ticket.channelId) {
       try { await discord.deleteChannel(ticket.channelId); } catch {}
     }
     ticket.status = 'closed';
     ticket.closedAt = new Date();
     ticket.closedBy = req.user.username;
+    if (!ticket.history) ticket.history = [];
+    ticket.history.push({
+      action: 'ticket_closed',
+      performedBy: req.user.username,
+      reason: req.body.reason || 'Closed from dashboard',
+      timestamp: new Date(),
+    });
     await ticket.save();
+
+    await AuditLog.create({
+      action: 'ticket.closed',
+      category: 'tickets',
+      description: `Closed ticket #${String(ticket.ticketId).padStart(4, '0')}`,
+      userId: req.user.id,
+      username: req.user.username,
+      target: `ticket:${ticket.ticketId}`,
+    }).catch(() => null);
+
     res.json({ success: true });
   } catch (err) {
+    console.error('[API] Close ticket error:', err);
     res.status(500).json({ error: 'Failed to close ticket' });
   }
 });
 
 router.get('/blacklists', requireStaff, async (req, res) => {
   try {
-    const { userId, department, page = 1, limit = 25 } = req.query;
+    const { userId, department } = req.query;
+    const { page, limit, skip } = parsePagination(req.query);
     const filter = {};
-    if (userId) filter.userId = userId;
+    if (userId) filter.userId = sanitizeSearch(userId);
     if (department && department !== 'all') filter.departmentId = department;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
     const [entries, total] = await Promise.all([
-      TicketBlacklist.find(filter).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).lean(),
+      TicketBlacklist.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       TicketBlacklist.countDocuments(filter),
     ]);
-    res.json({ entries, pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) } });
+    res.json({ entries, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch blacklists' });
   }
@@ -391,13 +426,28 @@ router.patch('/blacklists/:id', requireOwner, async (req, res) => {
 
 router.post('/commands/execute', requireOwner, async (req, res) => {
   try {
-    const { command, args } = req.body;
-    if (!command) return res.status(400).json({ error: 'command is required' });
-    const output = 'Command executed: ' + command + ' ' + (args || []).join(' ');
-    res.json({ success: true, output });
+    const { command, args, channelId } = req.body;
+    if (!command || typeof command !== 'string') return res.status(400).json({ error: 'command string is required' });
+    if (!channelId) return res.status(400).json({ error: 'channelId is required' });
+
+    const message = `${command} ${(args || []).join(' ')}`.trim();
+    if (message.length > 2000) return res.status(400).json({ error: 'Message too long (max 2000 chars)' });
+
+    const sent = await discord.sendMessage(channelId, message);
+
+    await AuditLog.create({
+      action: 'terminal.command',
+      category: 'terminal',
+      description: `Executed: ${message.slice(0, 100)}`,
+      userId: req.user.id,
+      username: req.user.username,
+      target: `channel:${channelId}`,
+    }).catch(() => null);
+
+    res.json({ success: true, messageId: sent?.id || null });
   } catch (err) {
     console.error('[API] Execute command error:', err);
-    res.status(500).json({ error: 'Failed to execute command' });
+    res.status(500).json({ error: err.message || 'Failed to execute command' });
   }
 });
 
@@ -415,23 +465,26 @@ router.get('/health', (req, res) => {
 
 router.get('/audit-logs', requireStaff, async (req, res) => {
   try {
-    const { category, search, page = 1, limit = 25 } = req.query;
+    const { category, search } = req.query;
+    const { page, limit, skip } = parsePagination(req.query);
     const filter = {};
     if (category && category !== 'all') filter.category = category;
     if (search) {
-      filter.$or = [
-        { action: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { username: { $regex: search, $options: 'i' } },
-        { target: { $regex: search, $options: 'i' } },
-      ];
+      const safeSearch = sanitizeSearch(search);
+      if (safeSearch) {
+        filter.$or = [
+          { action: { $regex: safeSearch, $options: 'i' } },
+          { description: { $regex: safeSearch, $options: 'i' } },
+          { username: { $regex: safeSearch, $options: 'i' } },
+          { target: { $regex: safeSearch, $options: 'i' } },
+        ];
+      }
     }
-    const skip = (parseInt(page) - 1) * parseInt(limit);
     const [logs, total] = await Promise.all([
-      AuditLog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).lean(),
+      AuditLog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       AuditLog.countDocuments(filter),
     ]);
-    res.json({ logs, pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) } });
+    res.json({ logs, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
   } catch (err) {
     console.error('[API] Audit logs error:', err);
     res.status(500).json({ error: 'Failed to fetch audit logs' });
@@ -470,7 +523,7 @@ router.post('/users', requireOwner, async (req, res) => {
     if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
     const existing = await DashboardUser.findOne({ username });
     if (existing) return res.status(400).json({ error: 'Username already exists' });
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
     const user = await DashboardUser.create({
       userId: `manual_${Date.now()}`, username, passwordHash, role: role || 'support',
     });

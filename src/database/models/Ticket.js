@@ -66,6 +66,7 @@ const ticketSchema = new Schema(
     closedAt: Date,
     closedBy: { type: String, default: '' },
     closedById: { type: String, default: '' },
+    closeReason: { type: String, default: '' },
     deletedAt: Date,
     deletedBy: { type: String, default: '' },
 
@@ -98,5 +99,8 @@ ticketSchema.index({ creatorId: 1, departmentId: 1, status: 1 });
 ticketSchema.index({ channelId: 1 });
 ticketSchema.index({ guildId: 1, status: 1 });
 ticketSchema.index({ guildId: 1, departmentId: 1, status: 1 });
+ticketSchema.index({ status: 1, lastUserMessageAt: 1 });
+ticketSchema.index({ status: 1, createdAt: 1 });
+ticketSchema.index({ creatorId: 1, status: 1 });
 
 export const Ticket = model('Ticket', ticketSchema);
