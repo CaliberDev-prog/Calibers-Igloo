@@ -255,6 +255,7 @@ function buildFullHtml(ticket, messages, guild, staff) {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src https:; font-src https:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ticket #${String(ticket.ticketId).padStart(4, '0')} Transcript</title>
 <style>
@@ -415,7 +416,7 @@ a{color:${BRAND};text-decoration:none}a:hover{text-decoration:underline}
     let found=0;
     msgs.forEach(m=>{
       const txt=m.textContent.toLowerCase();
-      m.querySelectorAll('.match-highlight').forEach(h=>h.outerHTML=h.textContent);
+      m.querySelectorAll('.match-highlight').forEach(h=>h.replaceWith(document.createTextNode(h.textContent)));
       if(!q){m.style.display='';return}
       if(txt.includes(q)){
         m.style.display='';
@@ -423,7 +424,25 @@ a{color:${BRAND};text-decoration:none}a:hover{text-decoration:underline}
         const body=m.querySelector('.msg-txt');
         if(body){
           const re=new RegExp('('+q.replace(/[.*+?^\$\{\}\(\)|[\\]\\\\]/g,'\\\\$&')+')','gi');
-          body.innerHTML=body.textContent.replace(re,'<span class="match-highlight">$1</span>');
+          const walker=document.createTreeWalker(body,NodeFilter.SHOW_TEXT);
+          const nodes=[];
+          while(walker.nextNode())nodes.push(walker.currentNode);
+          nodes.forEach(node=>{
+            if(!re.test(node.textContent))return;
+            const frag=document.createDocumentFragment();
+            let last=0;
+            node.textContent.replace(re,(match,_,offset)=>{
+              if(offset>last)frag.appendChild(document.createTextNode(node.textContent.slice(last,offset)));
+              const span=document.createElement('span');
+              span.className='match-highlight';
+              span.textContent=match;
+              frag.appendChild(span);
+              last=offset+match.length;
+              return match;
+            });
+            if(last<node.textContent.length)frag.appendChild(document.createTextNode(node.textContent.slice(last)));
+            node.parentNode.replaceChild(frag,node);
+          });
         }
       }else{
         m.style.display='none';

@@ -389,7 +389,7 @@ router.get('/tickets/:ticketId/transcript/download', requireStaff, async (req, r
       .replace(/[^a-zA-Z0-9._-]/g, '_')
       .slice(0, 100);
     res.setHeader('Content-Type', 'text/html');
-    res.setHeader('Content-Security-Policy', "sandbox allow-forms allow-scripts; script-src 'none'; object-src 'none';");
+    res.setHeader('Content-Security-Policy', "sandbox allow-forms allow-scripts; object-src 'none';");
     res.setHeader('Content-Disposition', `inline; filename="${safeFilename}"`);
     res.send(html);
   } catch (err) {

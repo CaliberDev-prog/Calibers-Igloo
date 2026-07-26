@@ -16,7 +16,7 @@
 | 4 | #12 | Bot command permission validation | **DONE** | #6 | Fixed 5 issues, 52 tests |
 | 5 | #1 | API input validation gaps | **DONE** | None | 22 endpoints validated, 28 tests |
 | 6 | #8 | NoSQL injection prevention | **DONE** | #1 | mongo-sanitize middleware, 26 tests |
-| 7 | #7 | XSS sanitization | Pending | None | No DOMPurify |
+| 7 | #7 | XSS sanitization | **DONE** | None | TreeWalker search fix, CSP meta, URL validation, 59 tests |
 | 8 | #9 | File upload / transcript security | Pending | #7 | Transcript CSP exists |
 | 9 | #3 | Harden CORS | Pending | None | Already done — may close |
 | 10 | #4 | Harden security headers | Pending | None | Already done via helmet |
@@ -49,7 +49,7 @@
 - ~~No token revocation/blacklist~~ **DONE in #15**
 - No CSRF tokens (SameSite=lax only)
 - ~~No mongo-sanitize middleware~~ **DONE in #8**
-- No DOMPurify for transcript rendering
+- ~~No DOMPurify for transcript rendering~~ **DONE in #7 — TreeWalker approach, no DOMPurify needed**
 - Some endpoints missing channelId/ObjectId validation
 - Audit logging missing on channels, roles, messages, config
 - MongoDB connection missing TLS, pool limits, socket timeout
