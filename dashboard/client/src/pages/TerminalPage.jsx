@@ -33,7 +33,7 @@ export default function TerminalPage() {
     (async () => {
       try {
         const data = await api.getChannels();
-        setChannels(data.channels.filter((c) => c.type === 0));
+        setChannels((data.channels || []).filter((c) => c.type === 0));
       } catch {
         toast('Failed to load channels', 'error');
       }
@@ -133,6 +133,7 @@ export default function TerminalPage() {
           onChange={(e) => setSelectedChannel(e.target.value)}
           className="input-dark w-auto min-w-[250px]"
           disabled={loadingChannels}
+          aria-label="Select a channel"
         >
           <option value="">
             {loadingChannels ? 'Loading channels...' : 'Select a channel'}

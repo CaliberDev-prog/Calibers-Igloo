@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth.jsx';
 import { ToastProvider } from './components/Toast.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import Layout from './components/Layout.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
@@ -18,6 +19,7 @@ import UsersPage from './pages/UsersPage.jsx';
 import TranscriptsPage from './pages/TranscriptsPage.jsx';
 import VerificationPage from './pages/VerificationPage.jsx';
 import GiveawaysPage from './pages/GiveawaysPage.jsx';
+import NotFoundPage from './pages/NotFoundPage.jsx';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -39,6 +41,7 @@ function LoadingScreen() {
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <AuthProvider>
       <ToastProvider>
         <BrowserRouter>
@@ -62,9 +65,11 @@ export default function App() {
               <Route path="verification" element={<VerificationPage />} />
               <Route path="giveaways" element={<GiveawaysPage />} />
             </Route>
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </BrowserRouter>
       </ToastProvider>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }

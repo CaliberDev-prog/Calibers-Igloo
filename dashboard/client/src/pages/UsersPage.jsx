@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader.jsx';
 import EmptyState from '../components/EmptyState.jsx';
+import Modal from '../components/Modal.jsx';
 
 const ROLES = [
   { value: 'owner', label: 'Owner', desc: 'Full access to everything' },
@@ -39,49 +40,47 @@ function CreateUserModal({ onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-dark-950/70 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="glass p-6 max-w-md w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-ice-300/10 flex items-center justify-center">
-            <UserPlus className="w-5 h-5 text-ice-300" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-dark-100">Create Dashboard User</p>
-            <p className="text-xs text-dark-400">Add a new staff account</p>
-          </div>
+    <Modal onClose={onClose}>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-ice-300/10 flex items-center justify-center">
+          <UserPlus className="w-5 h-5 text-ice-300" />
         </div>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Username</label>
-            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="input-dark text-sm" autoFocus onKeyDown={(e) => e.key === 'Enter' && handleCreate()} />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Password</label>
-            <div className="relative">
-              <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} className="input-dark text-sm pr-10" onKeyDown={(e) => e.key === 'Enter' && handleCreate()} />
-              <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-500 hover:text-dark-300">
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Role</label>
-            <select value={role} onChange={(e) => setRole(e.target.value)} className="input-dark text-sm">
-              {ROLES.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
-            </select>
-            <p className="text-[10px] text-dark-600 mt-1">{ROLES.find((r) => r.value === role)?.desc}</p>
-          </div>
-        </div>
-        <div className="flex justify-end gap-2 pt-2 border-t border-dark-700/30">
-          <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
-          <button onClick={handleCreate} disabled={saving || !username.trim() || !password.trim()} className="btn-primary text-sm disabled:opacity-50">
-            {saving ? 'Creating...' : 'Create User'}
-          </button>
+        <div>
+          <p className="text-sm font-semibold text-dark-100">Create Dashboard User</p>
+          <p className="text-xs text-dark-400">Add a new staff account</p>
         </div>
       </div>
-    </div>
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Username</label>
+          <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="input-dark text-sm" autoFocus onKeyDown={(e) => e.key === 'Enter' && handleCreate()} />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Password</label>
+          <div className="relative">
+            <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} className="input-dark text-sm pr-10" onKeyDown={(e) => e.key === 'Enter' && handleCreate()} />
+            <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-500 hover:text-dark-300">
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Role</label>
+          <select value={role} onChange={(e) => setRole(e.target.value)} className="input-dark text-sm" aria-label="User role">
+            {ROLES.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
+          <p className="text-[10px] text-dark-600 mt-1">{ROLES.find((r) => r.value === role)?.desc}</p>
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 pt-2 border-t border-dark-700/30">
+        <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
+        <button onClick={handleCreate} disabled={saving || !username.trim() || !password.trim()} className="btn-primary text-sm disabled:opacity-50">
+          {saving ? 'Creating...' : 'Create User'}
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -103,34 +102,32 @@ function EditUserModal({ user: targetUser, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-dark-950/70 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="glass p-6 max-w-sm w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-ice-300/10 flex items-center justify-center">
-            <Pencil className="w-5 h-5 text-ice-300" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-dark-100">Edit User</p>
-            <p className="text-xs text-dark-400">{targetUser.username}</p>
-          </div>
+    <Modal onClose={onClose} maxWidth="max-w-sm">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-ice-300/10 flex items-center justify-center">
+          <Pencil className="w-5 h-5 text-ice-300" />
         </div>
         <div>
-          <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Role</label>
-          <select value={role} onChange={(e) => setRole(e.target.value)} className="input-dark text-sm">
-            {ROLES.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
-          </select>
-          <p className="text-[10px] text-dark-600 mt-1">{ROLES.find((r) => r.value === role)?.desc}</p>
-        </div>
-        <div className="flex justify-end gap-2 pt-2 border-t border-dark-700/30">
-          <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="btn-primary text-sm disabled:opacity-50">
-            {saving ? 'Saving...' : 'Save'}
-          </button>
+          <p className="text-sm font-semibold text-dark-100">Edit User</p>
+          <p className="text-xs text-dark-400">{targetUser.username}</p>
         </div>
       </div>
-    </div>
+      <div>
+        <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Role</label>
+        <select value={role} onChange={(e) => setRole(e.target.value)} className="input-dark text-sm" aria-label="User role">
+          {ROLES.map((r) => (
+            <option key={r.value} value={r.value}>{r.label}</option>
+          ))}
+        </select>
+        <p className="text-[10px] text-dark-600 mt-1">{ROLES.find((r) => r.value === role)?.desc}</p>
+      </div>
+      <div className="flex justify-end gap-2 pt-2 border-t border-dark-700/30">
+        <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
+        <button onClick={handleSave} disabled={saving} className="btn-primary text-sm disabled:opacity-50">
+          {saving ? 'Saving...' : 'Save'}
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -151,28 +148,26 @@ function DeleteUserModal({ user: targetUser, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-dark-950/70 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="glass p-6 max-w-sm w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
-            <AlertTriangle className="w-5 h-5 text-red-400" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-dark-100">Delete User</p>
-            <p className="text-xs text-dark-400">This cannot be undone</p>
-          </div>
+    <Modal onClose={onClose} maxWidth="max-w-sm">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+          <AlertTriangle className="w-5 h-5 text-red-400" />
         </div>
-        <p className="text-xs text-dark-400 bg-dark-900/50 rounded-xl p-3 border border-dark-700/30">
-          Remove <strong className="text-dark-200">{targetUser.username}</strong> from the dashboard?
-        </p>
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
-          <button onClick={handleDelete} disabled={deleting} className="btn-danger text-sm disabled:opacity-50">
-            {deleting ? 'Deleting...' : 'Delete'}
-          </button>
+        <div>
+          <p className="text-sm font-semibold text-dark-100">Delete User</p>
+          <p className="text-xs text-dark-400">This cannot be undone</p>
         </div>
       </div>
-    </div>
+      <p className="text-xs text-dark-400 bg-dark-900/50 rounded-xl p-3 border border-dark-700/30">
+        Remove <strong className="text-dark-200">{targetUser.username}</strong> from the dashboard?
+      </p>
+      <div className="flex justify-end gap-2">
+        <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
+        <button onClick={handleDelete} disabled={deleting} className="btn-danger text-sm disabled:opacity-50">
+          {deleting ? 'Deleting...' : 'Delete'}
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -213,13 +208,8 @@ export default function UsersPage() {
       <PageHeader
         title="Dashboard Users"
         subtitle={`${users.length} account(s) with dashboard access`}
-        action={
-          isOwner ? (
-            <button onClick={() => setCreating(true)} className="btn-primary flex items-center gap-2 text-sm">
-              <UserPlus className="w-4 h-4" /> Add User
-            </button>
-          ) : null
-        }
+        action={isOwner ? () => setCreating(true) : undefined}
+        actionLabel={isOwner ? 'Add User' : undefined}
       />
 
       <div className="glass overflow-hidden">

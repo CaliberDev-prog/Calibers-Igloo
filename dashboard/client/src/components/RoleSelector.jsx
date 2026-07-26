@@ -20,6 +20,7 @@ export default function RoleSelector({ roles = [], value, onChange, label }) {
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
           className="input-dark appearance-none pr-10 cursor-pointer"
+          aria-label={label || 'Select a role'}
         >
           <option value="">Select a role...</option>
           {sorted.map((role) => (

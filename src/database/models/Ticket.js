@@ -102,5 +102,8 @@ ticketSchema.index({ guildId: 1, departmentId: 1, status: 1 });
 ticketSchema.index({ status: 1, lastUserMessageAt: 1 });
 ticketSchema.index({ status: 1, createdAt: 1 });
 ticketSchema.index({ creatorId: 1, status: 1 });
+ticketSchema.index({ status: 1, closedAt: 1 });
+ticketSchema.index({ firstStaffResponseAt: 1, status: 1 });
+ticketSchema.index({ creatorTag: 1, createdAt: -1 });
 
 export const Ticket = model('Ticket', ticketSchema);

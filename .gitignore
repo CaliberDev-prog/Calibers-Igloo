@@ -1,4 +1,14 @@
 node_modules/
 .env
+.env.local
+.env.*.local
+dashboard/.env
+dashboard/.env.local
+dashboard/.env.*.local
 npm-debug.log*
+*.log
+dist/
+client/dist/
+build/
 .DS_Store
+coverage/

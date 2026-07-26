@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
@@ -7,6 +7,7 @@ import {
   ArrowLeft, User, Clock, MessageSquare, Hash, Copy, Check,
   XCircle, UserPlus, UserMinus, Eye, Pencil,
 } from 'lucide-react';
+import Modal from '../components/Modal.jsx';
 
 const DEPTS = {
   general: { name: 'General Support', emoji: '🛟' },
@@ -34,41 +35,39 @@ function EditTicketModal({ ticket, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-dark-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="glass p-6 max-w-md w-full space-y-4 animate-scale-in" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-ice-300/10 ring-1 ring-ice-300/10 flex items-center justify-center">
-            <Pencil className="w-5 h-5 text-ice-300" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-dark-100">Edit Ticket #{String(ticket.ticketId).padStart(4, '0')}</p>
-            <p className="text-xs text-dark-400">Update ticket details</p>
-          </div>
+    <Modal onClose={onClose}>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-ice-300/10 ring-1 ring-ice-300/10 flex items-center justify-center">
+          <Pencil className="w-5 h-5 text-ice-300" />
         </div>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1.5 block">Department</label>
-            <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="input-dark text-sm">
-              {Object.entries(DEPTS).map(([id, d]) => (
-                <option key={id} value={id}>{d.emoji} {d.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1.5 block">Claimed By</label>
-            <input type="text" value={claimedBy} onChange={(e) => setClaimedBy(e.target.value)} className="input-dark text-sm" placeholder="Staff member name" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1.5 block">Notes</label>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="input-dark text-sm min-h-[80px] resize-y" placeholder="Internal notes about this ticket..." />
-          </div>
-        </div>
-        <div className="flex justify-end gap-2 pt-3 border-t border-dark-700/30">
-          <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="btn-primary text-sm disabled:opacity-50">{saving ? 'Saving...' : 'Save Changes'}</button>
+        <div>
+          <p className="text-sm font-semibold text-dark-100">Edit Ticket #{String(ticket.ticketId).padStart(4, '0')}</p>
+          <p className="text-xs text-dark-400">Update ticket details</p>
         </div>
       </div>
-    </div>
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1.5 block">Department</label>
+          <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="input-dark text-sm" aria-label="Department">
+            {Object.entries(DEPTS).map(([id, d]) => (
+              <option key={id} value={id}>{d.emoji} {d.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1.5 block">Claimed By</label>
+          <input type="text" value={claimedBy} onChange={(e) => setClaimedBy(e.target.value)} className="input-dark text-sm" placeholder="Staff member name" />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1.5 block">Notes</label>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="input-dark text-sm min-h-[80px] resize-y" placeholder="Internal notes about this ticket..." />
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 pt-3 border-t border-dark-700/30">
+        <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
+        <button onClick={handleSave} disabled={saving} className="btn-primary text-sm disabled:opacity-50">{saving ? 'Saving...' : 'Save Changes'}</button>
+      </div>
+    </Modal>
   );
 }
 
@@ -84,23 +83,30 @@ export default function TicketDetailPage() {
   const [participantId, setParticipantId] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [editing, setEditing] = useState(false);
+  const fetchIdRef = useRef(0);
 
-  const fetchTicket = async () => {
+  const fetchTicket = useCallback(async () => {
+    const id = ++fetchIdRef.current;
     try {
       const data = await api.getTicket(ticketId);
-      setTicket(data.ticket);
-    } catch (err) {
-      console.error(err);
+      if (id === fetchIdRef.current) setTicket(data.ticket);
+    } catch {
+      if (id === fetchIdRef.current) toast('Failed to load ticket', 'error');
     }
-    setLoading(false);
-  };
+    if (id === fetchIdRef.current) setLoading(false);
+  }, [ticketId, toast]);
 
-  useEffect(() => { fetchTicket(); }, [ticketId]);
+  useEffect(() => { fetchTicket(); }, [fetchTicket]);
+
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(t);
+  }, [copied]);
 
   const copyId = () => {
     navigator.clipboard.writeText(ticket?.creatorId || '');
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   const closeTicket = async () => {

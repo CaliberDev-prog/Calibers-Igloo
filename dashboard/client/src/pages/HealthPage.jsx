@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
-import { Activity, Database, Cpu, Clock, RefreshCw, Server, Zap, Globe } from 'lucide-react';
+import { useToast } from '../components/Toast.jsx';
+import { Activity, Database, Cpu, Clock, Server, Zap, Globe } from 'lucide-react';
 import PageHeader from '../components/PageHeader.jsx';
 
 export default function HealthPage() {
+  const { toast } = useToast();
   const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -12,8 +14,8 @@ export default function HealthPage() {
     try {
       const data = await api.getHealth();
       setHealth(data);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      toast('Failed to load health data', 'error');
     }
     setLoading(false);
   };

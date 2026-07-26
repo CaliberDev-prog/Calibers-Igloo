@@ -1,40 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
 import { useToast } from '../components/Toast.jsx';
 import {
-  Hash, Volume2, Megaphone, Server, Users, Copy, Check,
+  Hash, Volume2, Megaphone, Server, Users,
   RefreshCw, MessageSquare, Shield, Eye, Folder, Lock,
   Pencil, Trash2, AlertTriangle, Radio, ChevronUp, ChevronDown,
 } from 'lucide-react';
 import ColorWheel from '../components/ColorWheel.jsx';
+import MembersTab from '../components/MembersTab.jsx';
 import PageHeader from '../components/PageHeader.jsx';
+import Modal from '../components/Modal.jsx';
+import { CopyId, roleColorHex } from '../components/shared.jsx';
 
 const CHANNEL_ICONS = { 0: Hash, 2: Volume2, 4: Megaphone, 5: Megaphone, 13: Radio, 15: Lock };
 const CHANNEL_TYPE_NAMES = { 0: 'Text', 2: 'Voice', 4: 'Announcement', 5: 'Stage', 13: 'Forum', 15: 'Channel' };
 
-function CopyId({ id }) {
-  const [copied, setCopied] = useState(false);
-  const copy = () => {
-    navigator.clipboard.writeText(id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-  return (
-    <button onClick={copy} className="text-dark-600 hover:text-dark-400 transition-colors" title="Copy ID">
-      {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-    </button>
-  );
-}
-
-function roleColorHex(color) {
+function roleColorFallback(color) {
   if (!color || color === 0) return '#4b5563';
   return `#${color.toString(16).padStart(6, '0')}`;
 }
 
 function EditRoleModal({ role, onSave, onClose }) {
   const [name, setName] = useState(role.name);
-  const [hexColor, setHexColor] = useState(roleColorHex(role.color));
+  const [hexColor, setHexColor] = useState(roleColorFallback(role.color));
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -52,39 +41,37 @@ function EditRoleModal({ role, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-dark-950/70 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="glass p-6 max-w-md w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-ice-300/10 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-ice-300" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-dark-100">Edit Role</p>
-            <p className="text-xs text-dark-400">Rename or change color</p>
-          </div>
+    <Modal onClose={onClose} maxWidth="max-w-md">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-ice-300/10 flex items-center justify-center">
+          <Shield className="w-5 h-5 text-ice-300" />
         </div>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Role Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="input-dark text-sm"
-              autoFocus
-              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-            />
-          </div>
-          <ColorWheel value={hexColor} onChange={setHexColor} label="Role Color" />
-        </div>
-        <div className="flex justify-end gap-2 pt-2 border-t border-dark-700/30">
-          <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
-          <button onClick={handleSave} disabled={saving || !name.trim()} className="btn-primary text-sm disabled:opacity-50">
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
+        <div>
+          <p className="text-sm font-semibold text-dark-100">Edit Role</p>
+          <p className="text-xs text-dark-400">Rename or change color</p>
         </div>
       </div>
-    </div>
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Role Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="input-dark text-sm"
+            autoFocus
+            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+          />
+        </div>
+        <ColorWheel value={hexColor} onChange={setHexColor} label="Role Color" />
+      </div>
+      <div className="flex justify-end gap-2 pt-2 border-t border-dark-700/30">
+        <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
+        <button onClick={handleSave} disabled={saving || !name.trim()} className="btn-primary text-sm disabled:opacity-50">
+          {saving ? 'Saving...' : 'Save Changes'}
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -107,36 +94,34 @@ function EditChannelModal({ channel, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-dark-950/70 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="glass p-6 max-w-sm w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-ice-300/10 flex items-center justify-center">
-            <Hash className="w-5 h-5 text-ice-300" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-dark-100">Rename Channel</p>
-            <p className="text-xs text-dark-400">#{channel.name}</p>
-          </div>
+    <Modal onClose={onClose} maxWidth="max-w-sm">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-ice-300/10 flex items-center justify-center">
+          <Hash className="w-5 h-5 text-ice-300" />
         </div>
         <div>
-          <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Channel Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="input-dark text-sm"
-            autoFocus
-            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-          />
-        </div>
-        <div className="flex justify-end gap-2 pt-2 border-t border-dark-700/30">
-          <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
-          <button onClick={handleSave} disabled={saving || !name.trim()} className="btn-primary text-sm disabled:opacity-50">
-            {saving ? 'Renaming...' : 'Rename'}
-          </button>
+          <p className="text-sm font-semibold text-dark-100">Rename Channel</p>
+          <p className="text-xs text-dark-400">#{channel.name}</p>
         </div>
       </div>
-    </div>
+      <div>
+        <label className="text-xs font-medium text-dark-400 uppercase tracking-wider mb-1 block">Channel Name</label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="input-dark text-sm"
+          autoFocus
+          onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+        />
+      </div>
+      <div className="flex justify-end gap-2 pt-2 border-t border-dark-700/30">
+        <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
+        <button onClick={handleSave} disabled={saving || !name.trim()} className="btn-primary text-sm disabled:opacity-50">
+          {saving ? 'Renaming...' : 'Rename'}
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -157,29 +142,27 @@ function DeleteRoleModal({ role, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-dark-950/70 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="glass p-6 max-w-sm w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
-            <AlertTriangle className="w-5 h-5 text-red-400" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-dark-100">Delete Role</p>
-            <p className="text-xs text-dark-400">This cannot be undone</p>
-          </div>
+    <Modal onClose={onClose} maxWidth="max-w-sm">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+          <AlertTriangle className="w-5 h-5 text-red-400" />
         </div>
-        <p className="text-xs text-dark-400 bg-dark-900/50 rounded-xl p-3 border border-dark-700/30">
-          Are you sure you want to delete <strong className="text-dark-200">{role.name}</strong>?
-          Members with this role will lose its permissions.
-        </p>
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
-          <button onClick={handleDelete} disabled={deleting} className="btn-danger text-sm disabled:opacity-50">
-            {deleting ? 'Deleting...' : 'Delete Role'}
-          </button>
+        <div>
+          <p className="text-sm font-semibold text-dark-100">Delete Role</p>
+          <p className="text-xs text-dark-400">This cannot be undone</p>
         </div>
       </div>
-    </div>
+      <p className="text-xs text-dark-400 bg-dark-900/50 rounded-xl p-3 border border-dark-700/30">
+        Are you sure you want to delete <strong className="text-dark-200">{role.name}</strong>?
+        Members with this role will lose its permissions.
+      </p>
+      <div className="flex justify-end gap-2">
+        <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
+        <button onClick={handleDelete} disabled={deleting} className="btn-danger text-sm disabled:opacity-50">
+          {deleting ? 'Deleting...' : 'Delete Role'}
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -197,7 +180,7 @@ export default function ServerPage() {
   const [editingChannel, setEditingChannel] = useState(null);
   const [reordering, setReordering] = useState(false);
 
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
       const [chData, roleData] = await Promise.all([
@@ -207,17 +190,17 @@ export default function ServerPage() {
       setChannels(chData.channels || []);
       setRoles(roleData.roles || []);
 
-      if (!guild) {
-        try {
-          const overview = await api.getOverview();
-          setGuild(overview.guild);
-        } catch {}
-      }
-    } catch (err) {
+      try {
+        const overview = await api.getOverview();
+        setGuild(overview.guild);
+      } catch {}
+    } catch {
       toast('Failed to load server data', 'error');
     }
     setLoading(false);
-  };
+  }, [toast]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -240,28 +223,6 @@ export default function ServerPage() {
       await fetchAll();
     } catch (err) {
       toast(err.message || 'Failed to reorder channels', 'error');
-    }
-    setReordering(false);
-  };
-
-  const moveRole = async (direction) => {
-    const sorted = [...roles].sort((a, b) => (b.position || 0) - (a.position || 0));
-    const idx = sorted.findIndex((r) => r.id === editingRole?.id || r.id === roles.find(() => true)?.id);
-    if (idx === -1) return;
-
-    const newOrder = [...sorted];
-    const [moved] = newOrder.splice(idx, 1);
-    newOrder.splice(idx + direction, 0, moved);
-
-    const positions = newOrder.map((r, i) => ({ id: r.id, position: i }));
-
-    setReordering(true);
-    try {
-      await api.reorderRoles(positions);
-      toast('Roles reordered', 'success');
-      await fetchAll();
-    } catch (err) {
-      toast(err.message || 'Failed to reorder roles', 'error');
     }
     setReordering(false);
   };
@@ -310,6 +271,7 @@ export default function ServerPage() {
   const tabs = [
     { id: 'channels', label: 'Channels', icon: Hash },
     { id: 'roles', label: 'Roles', icon: Shield },
+    { id: 'members', label: 'Members', icon: Users },
     { id: 'overview', label: 'Overview', icon: Eye },
   ];
 
@@ -483,19 +445,19 @@ export default function ServerPage() {
                       )}
                       <div
                         className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: roleColorHex(role.color) }}
+                        style={{ backgroundColor: roleColorFallback(role.color) }}
                       />
                       <span className="text-sm text-dark-200 flex-1">{role.name}</span>
                       {role.color ? (
                         <span
                           className="text-[10px] font-mono px-2 py-0.5 rounded-full"
                           style={{
-                            backgroundColor: `${roleColorHex(role.color)}15`,
-                            color: roleColorHex(role.color),
-                            border: `1px solid ${roleColorHex(role.color)}30`,
+                            backgroundColor: `${roleColorFallback(role.color)}15`,
+                            color: roleColorFallback(role.color),
+                            border: `1px solid ${roleColorFallback(role.color)}30`,
                           }}
                         >
-                          {roleColorHex(role.color)}
+                          {roleColorFallback(role.color)}
                         </span>
                       ) : null}
                       {isOwner && (
@@ -522,6 +484,10 @@ export default function ServerPage() {
                 </div>
               )}
             </div>
+          )}
+
+          {activeTab === 'members' && (
+            <MembersTab roles={roles} />
           )}
 
           {activeTab === 'overview' && (

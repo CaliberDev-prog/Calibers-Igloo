@@ -46,8 +46,8 @@ export default function VerificationPage() {
     return r ? r.name : id;
   };
 
-  const verifiedRole = '🧊︱Igloo Member';
-  const unverifiedRole = '❄️︱Unverified';
+  const verifiedRole = config?.verifiedRoleName || '🧊︱Igloo Member';
+  const unverifiedRole = config?.unverifiedRoleName || '❄️︱Unverified';
 
   const features = [
     {

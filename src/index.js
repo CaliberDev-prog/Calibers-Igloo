@@ -23,6 +23,7 @@ import {
 } from './services/reactionRoleService.js';
 import { connectMongo, isMongoConnected } from './services/mongodb.js';
 import { recordMessage, recoverTickets, autoCloseCheck } from './services/ticketService.js';
+import { checkGiveawayEnd, handleGiveawayReactionAdd, handleGiveawayReactionRemove } from './services/giveawayService.js';
 import { ticketConfig } from './config/tickets.js';
 import { setClient } from './services/ownerNotify.js';
 import { getPrefix } from './services/prefixService.js';
@@ -31,6 +32,12 @@ import * as staffaddCommand from './commands/staffadd.js';
 
 if (!process.env.DISCORD_TOKEN) {
   throw new Error('Missing DISCORD_TOKEN in .env');
+}
+if (!process.env.GUILD_ID) {
+  throw new Error('Missing GUILD_ID in .env');
+}
+if (!process.env.OWNER_ID) {
+  throw new Error('Missing OWNER_ID in .env');
 }
 
 await connectMongo();
@@ -63,6 +70,7 @@ for (const cmd of modSlashCommands) {
 client.commands.set(staffaddCommand.data.name, staffaddCommand);
 
 let autoCloseInterval = null;
+let giveawayInterval = null;
 
 client.once(Events.ClientReady, async (readyClient) => {
   console.log(`[STARTUP] Logged in as ${readyClient.user.tag}`);
@@ -91,6 +99,13 @@ client.once(Events.ClientReady, async (readyClient) => {
         });
       }, 60 * 60 * 1000);
       autoCloseCheck(guild).catch(() => null);
+
+      giveawayInterval = setInterval(() => {
+        checkGiveawayEnd(readyClient).catch((err) => {
+          console.error('[GIVEAWAY] Check failed:', err.message);
+        });
+      }, 60 * 1000);
+      checkGiveawayEnd(readyClient).catch(() => null);
     } else {
       console.warn('[STARTUP] MongoDB not connected. Recovery, invites, and auto-close skipped.');
     }
@@ -108,7 +123,7 @@ client.on(Events.MessageCreate, async (message) => {
     .flatMap((d) => [d.categoryId].filter(Boolean));
 
   if (message.channel.parentId && ticketCategories.includes(message.channel.parentId)) {
-    await recordMessage(message);
+    recordMessage(message).catch(() => null);
   }
 
   const prefix = getPrefix();
@@ -143,14 +158,24 @@ client.on(Events.GuildMemberAdd, async (member) => {
   });
 });
 
-client.on(Events.MessageReactionAdd, handleReactionAdd);
-client.on(Events.MessageReactionRemove, handleReactionRemove);
+client.on(Events.MessageReactionAdd, (reaction, user) => {
+  handleReactionAdd(reaction, user);
+  handleGiveawayReactionAdd(reaction, user);
+});
+client.on(Events.MessageReactionRemove, (reaction, user) => {
+  handleReactionRemove(reaction, user);
+  handleGiveawayReactionRemove(reaction, user);
+});
 
 client.on(Events.Error, console.error);
 
+let shuttingDown = false;
 function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
   console.log(`[SHUTDOWN] Received ${signal}. Shutting down gracefully...`);
   if (autoCloseInterval) clearInterval(autoCloseInterval);
+  if (giveawayInterval) clearInterval(giveawayInterval);
   client.destroy().catch(() => null);
   import('mongoose').then((mongoose) => {
     mongoose.default.disconnect().then(() => {
@@ -158,6 +183,7 @@ function shutdown(signal) {
       process.exit(0);
     });
   }).catch(() => process.exit(0));
+  setTimeout(() => process.exit(1), 10000);
 }
 
 process.on('SIGINT', () => shutdown('SIGINT'));

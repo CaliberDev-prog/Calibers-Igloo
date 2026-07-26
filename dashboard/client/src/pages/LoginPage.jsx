@@ -2,7 +2,7 @@ import { useAuth } from '../lib/auth.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { useNavigate } from 'react-router-dom';
 import { Snowflake } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function LoginPage() {
   const { user, loading, login } = useAuth();
@@ -13,15 +13,21 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  if (loading) return null;
-  if (user) {
-    navigate('/dashboard', { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (!loading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [loading, user, navigate]);
+
+  if (loading || user) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!username.trim() || !password) {
+      setError('Username and password are required');
+      return;
+    }
     setSubmitting(true);
     try {
       const data = await login(username, password);

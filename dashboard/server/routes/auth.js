@@ -1,14 +1,14 @@
 import { Router } from 'express';
 import DashboardUser from '../models/DashboardUser.js';
-import { generateToken } from '../middleware/auth.js';
+import { generateToken, authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
-const OWNER_ID = process.env.OWNER_ID || '1293164546005012512';
+const OWNER_ID = process.env.OWNER_ID;
 
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) {
+  if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
     return res.status(400).json({ error: 'Username and password required' });
   }
 
@@ -23,10 +23,11 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
+    const effectiveRole = user.userId === OWNER_ID ? 'owner' : user.role;
     const token = generateToken({
       id: user.userId,
       username: user.username,
-      role: user.userId === OWNER_ID ? 'owner' : user.role,
+      role: effectiveRole,
     });
 
     res.cookie('token', token, {
@@ -38,29 +39,24 @@ router.post('/login', async (req, res) => {
 
     res.json({
       success: true,
-      user: { id: user.userId, username: user.username, role: user.userId === OWNER_ID ? 'owner' : user.role },
+      user: { id: user.userId, username: user.username, role: effectiveRole },
     });
   } catch (err) {
-    console.error('[AUTH] Login error:', err);
+    console.error('[AUTH] Login error:', err.message);
     res.status(500).json({ error: 'Internal error' });
   }
 });
 
-router.get('/me', async (req, res) => {
-  const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: 'Not authenticated' });
-
-  try {
-    const jwt = await import('jsonwebtoken');
-    const decoded = jwt.default.verify(token, process.env.JWT_SECRET);
-    res.json({ user: decoded });
-  } catch {
-    res.status(401).json({ error: 'Invalid token' });
-  }
+router.get('/me', authenticate, (req, res) => {
+  res.json({ user: req.user });
 });
 
 router.post('/logout', (req, res) => {
-  res.clearCookie('token');
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+  });
   res.json({ success: true });
 });
 

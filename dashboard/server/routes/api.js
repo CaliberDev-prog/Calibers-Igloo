@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { authenticate, requireOwner, requireStaff } from '../middleware/auth.js';
+import { authenticate, requireOwner, requireStaff, STAFF_ROLES } from '../middleware/auth.js';
 import * as discord from '../services/discord.js';
 import AuditLog from '../models/AuditLog.js';
 import DashboardUser from '../models/DashboardUser.js';
@@ -12,6 +12,7 @@ const Ticket = mongoose.model('Ticket', new mongoose.Schema({}, { strict: false 
 const TicketBlacklist = mongoose.model('TicketBlacklist', new mongoose.Schema({}, { strict: false }));
 const Counter = mongoose.model('Counter', new mongoose.Schema({}, { strict: false }));
 const BotConfig = mongoose.model('BotConfig', new mongoose.Schema({}, { strict: false }));
+const Giveaway = mongoose.model('Giveaway', new mongoose.Schema({}, { strict: false }));
 
 function sanitizeSearch(str) {
   if (!str || typeof str !== 'string') return '';
@@ -45,7 +46,9 @@ router.get('/overview', requireStaff, async (req, res) => {
         });
         if (res.ok) botUser = await res.json();
       }
-    } catch {}
+    } catch (e) {
+      console.warn('[API] Bot user fetch failed:', e.message);
+    }
 
     const byDept = await Ticket.aggregate([
       { $match: { status: 'open' } },
@@ -69,7 +72,7 @@ router.get('/overview', requireStaff, async (req, res) => {
       recentTickets,
       blacklists,
       database: dbState,
-      bot: { id: botUser?.id || null, uptime: process.uptime(), memory: process.memoryUsage(), nodeVersion: process.version },
+      bot: { id: botUser?.id || null, uptime: process.uptime(), ...(req.user.role === 'owner' ? { memory: process.memoryUsage(), nodeVersion: process.version } : {}) },
     });
   } catch (err) {
     console.error('[API] Overview error:', err);
@@ -90,9 +93,19 @@ router.get('/config', requireStaff, async (req, res) => {
 router.post('/config', requireOwner, async (req, res) => {
   try {
     const { settings } = req.body;
+    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+      return res.status(400).json({ error: 'settings object is required' });
+    }
+    const sanitized = {};
+    const ALLOWED_KEYS = ['verificationChannel', 'welcomeChannel', 'guidelinesChannel', 'rolesChannel', 'ticketCategoryId', 'logChannelId', 'transcriptChannelId'];
+    for (const [key, value] of Object.entries(settings)) {
+      if (ALLOWED_KEYS.includes(key) && typeof value === 'string') {
+        sanitized[key] = value;
+      }
+    }
     await BotConfig.findOneAndUpdate(
       { type: 'settings' },
-      { $set: { settings, updatedAt: new Date() } },
+      { $set: { settings: sanitized, updatedAt: new Date() } },
       { upsert: true }
     );
     res.json({ success: true });
@@ -115,6 +128,7 @@ router.patch('/channels/:channelId', requireOwner, async (req, res) => {
   try {
     const { name } = req.body;
     if (!name || typeof name !== 'string') return res.status(400).json({ error: 'Invalid channel name' });
+    if (name.length > 100) return res.status(400).json({ error: 'Channel name too long (max 100)' });
     const updated = await discord.editChannel(req.params.channelId, { name });
     res.json({ channel: updated });
   } catch (err) {
@@ -126,7 +140,7 @@ router.patch('/channels/:channelId', requireOwner, async (req, res) => {
 router.patch('/channels-reorder', requireOwner, async (req, res) => {
   try {
     const { positions } = req.body;
-    if (!Array.isArray(positions)) return res.status(400).json({ error: 'positions array required' });
+    if (!Array.isArray(positions) || !positions.every(p => p.id && typeof p.position === 'number')) return res.status(400).json({ error: 'positions array required with {id, position} format' });
     await discord.reorderChannels(positions);
     res.json({ success: true });
   } catch (err) {
@@ -144,12 +158,44 @@ router.get('/roles', requireStaff, async (req, res) => {
   }
 });
 
+router.get('/members', requireStaff, async (req, res) => {
+  try {
+    const { search, limit = 50, after = '0' } = req.query;
+    const fetchLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 200);
+    const safeAfter = /^\d{17,20}$/.test(after) ? after : '0';
+    const members = await discord.getMembers(fetchLimit, safeAfter);
+    let results = members.map((m) => ({
+      id: m.user?.id,
+      username: m.user?.username,
+      displayName: m.nick || m.user?.global_name || m.user?.username,
+      avatar: m.user?.avatar ? `https://cdn.discordapp.com/avatars/${m.user.id}/${m.user.avatar}.png?size=64` : null,
+      roles: m.roles || [],
+      joinedAt: m.joined_at,
+      isBot: m.user?.bot || false,
+      status: m.presence?.status || 'offline',
+    }));
+    if (search) {
+      const q = search.toLowerCase();
+      results = results.filter((m) => m.username?.toLowerCase().includes(q) || m.displayName?.toLowerCase().includes(q) || m.id?.includes(q));
+    }
+    const hasMore = members.length === fetchLimit;
+    const lastId = hasMore && results.length > 0 ? results[results.length - 1].id : null;
+    res.json({ members: results, hasMore, nextAfter: lastId });
+  } catch (err) {
+    console.error('[API] Members error:', err);
+    res.status(500).json({ error: 'Failed to fetch members' });
+  }
+});
+
 router.patch('/roles/:roleId', requireOwner, async (req, res) => {
   try {
     const { name, color } = req.body;
     const data = {};
-    if (name && typeof name === 'string') data.name = name;
-    if (color !== undefined) data.color = typeof color === 'number' ? color : parseInt(String(color).replace('#', ''), 16);
+    if (name && typeof name === 'string') data.name = name.slice(0, 100);
+    if (color !== undefined) {
+      const c = typeof color === 'number' ? color : parseInt(String(color).replace('#', ''), 16);
+      if (!isNaN(c) && c >= 0 && c <= 0xFFFFFF) data.color = c;
+    }
     if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No fields to update' });
     const updated = await discord.editRole(req.params.roleId, data);
     res.json({ role: updated });
@@ -172,7 +218,7 @@ router.delete('/roles/:roleId', requireOwner, async (req, res) => {
 router.patch('/roles-reorder', requireOwner, async (req, res) => {
   try {
     const { positions } = req.body;
-    if (!Array.isArray(positions)) return res.status(400).json({ error: 'positions array required' });
+    if (!Array.isArray(positions) || !positions.every(p => p.id && typeof p.position === 'number')) return res.status(400).json({ error: 'positions array required with {id, position} format' });
     await discord.reorderRoles(positions);
     res.json({ success: true });
   } catch (err) {
@@ -214,30 +260,64 @@ router.get('/tickets', requireStaff, async (req, res) => {
 
 router.get('/tickets/stats/overview', requireStaff, async (req, res) => {
   try {
-    const total = await Ticket.countDocuments();
-    const open = await Ticket.countDocuments({ status: 'open' });
-    const closed = await Ticket.countDocuments({ status: 'closed' });
-    const deleted = await Ticket.countDocuments({ status: 'deleted' });
-    const byDept = await Ticket.aggregate([
-      { $group: { _id: '$departmentId', count: { $sum: 1 }, open: { $sum: { $cond: [{ $eq: ['$status', 'open'] }, 1, 0] } } } },
+    const { days = '30' } = req.query;
+    const dayCount = Math.min(Math.max(parseInt(days) || 30, 1), 365);
+    const since = new Date(Date.now() - dayCount * 24 * 60 * 60 * 1000);
+
+    const [total, open, closed, deleted, byDept, createdOverTime, closedOverTime, avgDuration, avgFirstResponse, topUsers, deptStats] = await Promise.all([
+      Ticket.countDocuments(),
+      Ticket.countDocuments({ status: 'open' }),
+      Ticket.countDocuments({ status: 'closed' }),
+      Ticket.countDocuments({ status: 'deleted' }),
+      Ticket.aggregate([
+        { $match: { createdAt: { $gte: since } } },
+        { $group: { _id: '$departmentId', count: { $sum: 1 }, open: { $sum: { $cond: [{ $eq: ['$status', 'open'] }, 1, 0] } }, closed: { $sum: { $cond: [{ $eq: ['$status', 'closed'] }, 1, 0] } } } },
+      ]),
+      Ticket.aggregate([
+        { $match: { createdAt: { $gte: since } } },
+        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+      Ticket.aggregate([
+        { $match: { closedAt: { $gte: since }, status: 'closed' } },
+        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$closedAt' } }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+      Ticket.aggregate([
+        { $match: { status: 'closed', closedAt: { $exists: true, $gte: since } } },
+        { $project: { duration: { $subtract: ['$closedAt', '$createdAt'] } } },
+        { $group: { _id: null, avg: { $avg: '$duration' } } },
+      ]),
+      Ticket.aggregate([
+        { $match: { firstStaffResponseAt: { $exists: true, $gte: since }, status: 'closed' } },
+        { $project: { responseTime: { $subtract: ['$firstStaffResponseAt', '$createdAt'] } } },
+        { $group: { _id: null, avg: { $avg: '$responseTime' } } },
+      ]),
+      Ticket.aggregate([
+        { $match: { createdAt: { $gte: since } } },
+        { $group: { _id: '$creatorTag', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 },
+      ]),
+      Ticket.aggregate([
+        { $match: { createdAt: { $gte: since } } },
+        { $group: { _id: '$departmentId', count: { $sum: 1 } } },
+      ]),
     ]);
-    const last7Days = await Ticket.aggregate([
-      { $match: { createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } },
-      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
-      { $sort: { _id: 1 } },
-    ]);
-    const avgDuration = await Ticket.aggregate([
-      { $match: { status: 'closed', closedAt: { $exists: true } } },
-      { $project: { duration: { $subtract: ['$closedAt', '$createdAt'] } } },
-      { $group: { _id: null, avg: { $avg: '$duration' } } },
-    ]);
-    const topUsers = await Ticket.aggregate([
-      { $group: { _id: '$creatorTag', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 5 },
-    ]);
-    res.json({ total, open, closed, deleted, byDepartment: byDept, last7Days, avgDuration: avgDuration[0]?.avg || 0, topUsers });
+
+    res.json({
+      total, open, closed, deleted,
+      byDepartment: byDept,
+      createdOverTime,
+      closedOverTime,
+      avgDuration: avgDuration[0]?.avg || 0,
+      avgFirstResponse: avgFirstResponse[0]?.avg || 0,
+      topUsers,
+      recentByDepartment: deptStats,
+      days: dayCount,
+    });
   } catch (err) {
+    console.error('[API] Stats overview error:', err);
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
@@ -280,6 +360,34 @@ router.get('/tickets/:ticketId/transcript', requireStaff, async (req, res) => {
   }
 });
 
+router.get('/tickets/:ticketId/transcript/download', requireStaff, async (req, res) => {
+  try {
+    const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) }).lean();
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+    if (!ticket.transcript?.generated) return res.status(404).json({ error: 'No transcript available' });
+    const transcriptChannelId = process.env.TRANSCRIPT_CHANNEL_ID || process.env.LOG_CHANNEL_ID;
+    if (!transcriptChannelId || !ticket.transcript.logMessageId) {
+      return res.status(404).json({ error: 'Transcript channel or message not available' });
+    }
+    const message = await discord.getMessage(transcriptChannelId, ticket.transcript.logMessageId);
+    const attachment = message.attachments?.[0];
+    if (!attachment) return res.status(404).json({ error: 'Transcript file not found' });
+    const fetchRes = await fetch(attachment.url);
+    if (!fetchRes.ok) return res.status(500).json({ error: 'Failed to fetch transcript file' });
+    const html = await fetchRes.text();
+    const safeFilename = (ticket.transcript.filename || 'transcript.html')
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .slice(0, 100);
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Content-Security-Policy', "sandbox allow-forms allow-scripts; script-src 'none'; object-src 'none';");
+    res.setHeader('Content-Disposition', `inline; filename="${safeFilename}"`);
+    res.send(html);
+  } catch (err) {
+    console.error('[API] Transcript download error:', err);
+    res.status(500).json({ error: 'Failed to download transcript' });
+  }
+});
+
 router.post('/tickets/:ticketId/close', requireStaff, async (req, res) => {
   try {
     const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) });
@@ -292,11 +400,13 @@ router.post('/tickets/:ticketId/close', requireStaff, async (req, res) => {
     ticket.status = 'closed';
     ticket.closedAt = new Date();
     ticket.closedBy = req.user.username;
+    ticket.closedById = req.user.id || '';
+    ticket.closeReason = String(req.body.reason || 'Closed from dashboard').slice(0, 500);
     if (!ticket.history) ticket.history = [];
     ticket.history.push({
       action: 'ticket_closed',
       performedBy: req.user.username,
-      reason: req.body.reason || 'Closed from dashboard',
+      reason: ticket.closeReason,
       timestamp: new Date(),
     });
     await ticket.save();
@@ -322,7 +432,7 @@ router.get('/blacklists', requireStaff, async (req, res) => {
     const { userId, department } = req.query;
     const { page, limit, skip } = parsePagination(req.query);
     const filter = {};
-    if (userId) filter.userId = sanitizeSearch(userId);
+    if (userId) filter.userId = userId.trim();
     if (department && department !== 'all') filter.departmentId = department;
     const [entries, total] = await Promise.all([
       TicketBlacklist.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
@@ -347,12 +457,13 @@ router.post('/blacklists', requireOwner, async (req, res) => {
   try {
     const { userId, reason, departmentId } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId is required' });
+    if (!/^\d{17,20}$/.test(String(userId).trim())) return res.status(400).json({ error: 'Invalid Discord user ID format' });
     const entry = await TicketBlacklist.findOneAndUpdate(
       { userId, departmentId: departmentId || 'global' },
       {
         userId,
         departmentId: departmentId || 'global',
-        reason: reason || 'No reason provided',
+        reason: String(reason || 'No reason provided').slice(0, 500),
         addedBy: req.user.username,
         active: true,
       },
@@ -376,7 +487,9 @@ router.post('/blacklists', requireOwner, async (req, res) => {
 router.get('/messages/:channelId', requireStaff, async (req, res) => {
   try {
     const { before, limit = 50 } = req.query;
-    const messages = await discord.getMessages(req.params.channelId, parseInt(limit), before);
+    const fetchLimit = Math.min(Math.max(parseInt(limit) || 1, 1), 100);
+    const safeBefore = before && /^\d{17,20}$/.test(before) ? before : undefined;
+    const messages = await discord.getMessages(req.params.channelId, fetchLimit, safeBefore);
     res.json({ messages });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch messages' });
@@ -386,6 +499,7 @@ router.get('/messages/:channelId', requireStaff, async (req, res) => {
 router.post('/messages/:channelId', requireStaff, async (req, res) => {
   try {
     const { content, embed } = req.body;
+    if (content && typeof content === 'string' && content.length > 2000) return res.status(400).json({ error: 'Message content too long (max 2000)' });
     const message = await discord.sendMessage(req.params.channelId, content, embed || undefined);
     res.json({ message });
   } catch (err) {
@@ -428,8 +542,8 @@ router.patch('/tickets/:ticketId', requireOwner, async (req, res) => {
     const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) });
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     if (departmentId !== undefined) ticket.departmentId = departmentId;
-    if (notes !== undefined) ticket.notes = notes;
-    if (claimedBy !== undefined) ticket.claimedBy = claimedBy;
+    if (notes !== undefined) ticket.notes = String(notes).slice(0, 5000);
+    if (claimedBy !== undefined) ticket.claimedBy = String(claimedBy).slice(0, 100);
     await ticket.save();
     res.json({ ticket });
   } catch (err) {
@@ -441,7 +555,7 @@ router.patch('/tickets/:ticketId', requireOwner, async (req, res) => {
 router.post('/tickets/:ticketId/participants', requireStaff, async (req, res) => {
   try {
     const { userId } = req.body;
-    if (!userId) return res.status(400).json({ error: 'userId is required' });
+    if (!userId || !/^\d{17,20}$/.test(String(userId).trim())) return res.status(400).json({ error: 'Valid Discord user ID required' });
     const ticket = await Ticket.findOne({ ticketId: parseInt(req.params.ticketId) });
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     if (!ticket.participants) ticket.participants = [];
@@ -472,8 +586,8 @@ router.patch('/blacklists/:id', requireOwner, async (req, res) => {
     const { reason, departmentId } = req.body;
     const entry = await TicketBlacklist.findById(req.params.id);
     if (!entry) return res.status(404).json({ error: 'Blacklist entry not found' });
-    if (reason !== undefined) entry.reason = reason;
-    if (departmentId !== undefined) entry.departmentId = departmentId;
+    if (reason !== undefined) entry.reason = String(reason).slice(0, 500);
+    if (departmentId !== undefined) entry.departmentId = String(departmentId).slice(0, 50);
     await entry.save();
     res.json({ entry });
   } catch (err) {
@@ -505,19 +619,210 @@ router.post('/commands/execute', requireOwner, async (req, res) => {
     res.json({ success: true, messageId: sent?.id || null });
   } catch (err) {
     console.error('[API] Execute command error:', err);
-    res.status(500).json({ error: err.message || 'Failed to execute command' });
+    res.status(500).json({ error: 'Failed to execute command' });
+  }
+});
+
+router.get('/giveaways', requireStaff, async (req, res) => {
+  try {
+    const { status, page = 1, limit = 20 } = req.query;
+    const p = Math.max(1, parseInt(page));
+    const l = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+    const filter = {};
+    if (status && status !== 'all') filter.status = status;
+    const [giveaways, total] = await Promise.all([
+      Giveaway.find(filter).sort({ createdAt: -1 }).skip((p - 1) * l).limit(l).lean(),
+      Giveaway.countDocuments(filter),
+    ]);
+    res.json({ giveaways, pagination: { page: p, limit: l, total, pages: Math.ceil(total / l) } });
+  } catch (err) {
+    console.error('[API] Get giveaways error:', err);
+    res.status(500).json({ error: 'Failed to fetch giveaways' });
+  }
+});
+
+router.post('/giveaways', requireOwner, async (req, res) => {
+  try {
+    const { prize, description, winners, duration, channelId, requirementRoleId, requirementMinMessages } = req.body;
+    if (!prize || !prize.trim()) return res.status(400).json({ error: 'Prize is required' });
+    if (!channelId || !/^\d{17,20}$/.test(String(channelId).trim())) return res.status(400).json({ error: 'Valid channel ID is required' });
+    if (requirementRoleId && !/^\d{17,20}$/.test(String(requirementRoleId).trim())) return res.status(400).json({ error: 'Invalid role ID' });
+    const winnerCount = Math.min(Math.max(parseInt(winners) || 1, 1), 20);
+    const durationMs = Math.min(Math.max(parseInt(duration) || 60, 1) * 60 * 1000, 30 * 24 * 60 * 60 * 1000);
+    const endAt = new Date(Date.now() + durationMs);
+
+    let messageId = '';
+    try {
+      const embed = {
+        title: `\uD83C\uDF89 ${prize}`,
+        description: [
+          description || '',
+          '',
+          `**Winner(s):** ${winnerCount}`,
+          `**Ends:** <t:${Math.floor(endAt.getTime() / 1000)}:R>`,
+          requirementRoleId ? `**Required Role:** <@&${requirementRoleId}>` : '',
+          requirementMinMessages ? `**Min Messages:** ${requirementMinMessages}` : '',
+        ].filter(Boolean).join('\n'),
+        color: 0x75cff5,
+        footer: { text: 'React with 🎉 to enter!' },
+        timestamp: endAt.toISOString(),
+      };
+      const sent = await discord.sendMessage(channelId, '', embed);
+      messageId = sent?.id || '';
+      if (messageId) {
+        const { default: fetch } = await import('node-fetch');
+        await fetch(`${discord.BASE}/channels/${channelId}/messages/${messageId}/reactions/%F0%9F%8E%89/@me`, {
+          method: 'PUT',
+          headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+        }).catch(() => null);
+      }
+    } catch (e) {
+      console.error('[API] Failed to send giveaway message:', e.message);
+    }
+
+    const giveaway = await Giveaway.create({
+      messageId,
+      channelId,
+      guildId: process.env.DISCORD_GUILD_ID || '',
+      prize: prize.trim(),
+      description: String(description || '').trim().slice(0, 2000),
+      winners: winnerCount,
+      hostId: req.user.id,
+      hostTag: req.user.username,
+      status: 'active',
+      entries: [],
+      winnerIds: [],
+      endAt,
+      requirementRoleId: requirementRoleId || '',
+      requirementMinMessages: parseInt(requirementMinMessages) || 0,
+    });
+
+    await AuditLog.create({
+      action: 'giveaway.create',
+      category: 'general',
+      description: `Created giveaway: ${prize}`,
+      userId: req.user.id,
+      username: req.user.username,
+      target: giveaway._id.toString(),
+    }).catch(() => null);
+
+    res.json({ giveaway });
+  } catch (err) {
+    console.error('[API] Create giveaway error:', err);
+    res.status(500).json({ error: 'Failed to create giveaway' });
+  }
+});
+
+router.post('/giveaways/:id/end', requireOwner, async (req, res) => {
+  try {
+    const giveaway = await Giveaway.findById(req.params.id);
+    if (!giveaway) return res.status(404).json({ error: 'Giveaway not found' });
+    if (giveaway.status !== 'active') return res.status(400).json({ error: 'Giveaway is not active' });
+
+    giveaway.status = 'ended';
+    giveaway.endedAt = new Date();
+
+    const entries = giveaway.entries || [];
+    const winnerCount = Math.min(giveaway.winners || 1, entries.length);
+    const shuffled = [...entries].sort(() => Math.random() - 0.5);
+    giveaway.winnerIds = shuffled.slice(0, winnerCount);
+
+    await giveaway.save();
+
+    if (giveaway.messageId && giveaway.channelId) {
+      const mentions = giveaway.winnerIds.map((id) => `<@${id}>`).join(', ') || 'No valid entries';
+      const embed = {
+        title: `🎉 ${giveaway.prize}`,
+        description: `**Winner(s):** ${mentions}\n\nThis giveaway has ended.`,
+        color: 0x57f287,
+      };
+      await discord.editMessage(giveaway.channelId, giveaway.messageId, '', embed).catch(() => null);
+    }
+
+    await AuditLog.create({
+      action: 'giveaway.end',
+      category: 'general',
+      description: `Ended giveaway: ${giveaway.prize}`,
+      userId: req.user.id,
+      username: req.user.username,
+      target: giveaway._id.toString(),
+    }).catch(() => null);
+
+    res.json({ giveaway });
+  } catch (err) {
+    console.error('[API] End giveaway error:', err);
+    res.status(500).json({ error: 'Failed to end giveaway' });
+  }
+});
+
+router.post('/giveaways/:id/reroll', requireOwner, async (req, res) => {
+  try {
+    const giveaway = await Giveaway.findById(req.params.id);
+    if (!giveaway) return res.status(404).json({ error: 'Giveaway not found' });
+    if (giveaway.status !== 'ended') return res.status(400).json({ error: 'Giveaway must be ended first' });
+
+    const entries = (giveaway.entries || []).filter((id) => !(giveaway.winnerIds || []).includes(id));
+    const winnerCount = Math.min(giveaway.winners || 1, entries.length);
+    const shuffled = [...entries].sort(() => Math.random() - 0.5);
+    giveaway.winnerIds = shuffled.slice(0, winnerCount);
+    await giveaway.save();
+
+    if (giveaway.messageId && giveaway.channelId) {
+      const mentions = giveaway.winnerIds.map((id) => `<@${id}>`).join(', ') || 'No valid entries for reroll';
+      const embed = {
+        title: `\uD83C\uDF89 ${giveaway.prize} (Rerolled)`,
+        description: `**New Winner(s):** ${mentions}`,
+        color: 0x9b59b6,
+      };
+      await discord.editMessage(giveaway.channelId, giveaway.messageId, '', embed).catch(() => null);
+    }
+
+    await AuditLog.create({
+      action: 'giveaway.reroll',
+      category: 'general',
+      description: `Rerolled giveaway: ${giveaway.prize}`,
+      userId: req.user.id,
+      username: req.user.username,
+      target: giveaway._id.toString(),
+    }).catch(() => null);
+
+    res.json({ giveaway });
+  } catch (err) {
+    console.error('[API] Reroll giveaway error:', err);
+    res.status(500).json({ error: 'Failed to reroll giveaway' });
+  }
+});
+
+router.delete('/giveaways/:id', requireOwner, async (req, res) => {
+  try {
+    const giveaway = await Giveaway.findByIdAndDelete(req.params.id);
+    if (!giveaway) return res.status(404).json({ error: 'Giveaway not found' });
+
+    if (giveaway.messageId && giveaway.channelId) {
+      await discord.deleteMessage(giveaway.channelId, giveaway.messageId).catch(() => null);
+    }
+
+    await AuditLog.create({
+      action: 'giveaway.delete',
+      category: 'general',
+      description: `Deleted giveaway: ${giveaway.prize}`,
+      userId: req.user.id,
+      username: req.user.username,
+    }).catch(() => null);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[API] Delete giveaway error:', err);
+    res.status(500).json({ error: 'Failed to delete giveaway' });
   }
 });
 
 router.get('/health', (req, res) => {
   const dbState = mongoose.connection.readyState;
   res.json({
-    status: 'ok',
+    status: dbState === 1 ? 'ok' : 'degraded',
     database: dbState === 1 ? 'connected' : 'disconnected',
     uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    nodeVersion: process.version,
-    timestamp: new Date().toISOString(),
   });
 });
 
@@ -549,13 +854,20 @@ router.get('/audit-logs', requireStaff, async (req, res) => {
   }
 });
 
-router.post('/audit-logs', requireStaff, async (req, res) => {
+router.post('/audit-logs', requireOwner, async (req, res) => {
   try {
     const { action, category, description, target, targetId, metadata } = req.body;
+    if (!action || typeof action !== 'string') return res.status(400).json({ error: 'action is required' });
+    if (!description || typeof description !== 'string') return res.status(400).json({ error: 'description is required' });
     const log = await AuditLog.create({
-      action, category: category || 'general', description,
-      userId: req.user.id, username: req.user.username,
-      target, targetId, metadata,
+      action: action.slice(0, 100),
+      category: (category || 'general').slice(0, 50),
+      description: description.slice(0, 500),
+      userId: req.user.id,
+      username: req.user.username,
+      target: target ? String(target).slice(0, 200) : undefined,
+      targetId: targetId ? String(targetId).slice(0, 200) : undefined,
+      metadata: typeof metadata === 'object' && metadata !== null ? metadata : undefined,
       ip: req.ip,
     });
     res.json({ log });
@@ -579,11 +891,15 @@ router.post('/users', requireOwner, async (req, res) => {
   try {
     const { username, password, role } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
-    const existing = await DashboardUser.findOne({ username });
+    if (typeof username !== 'string' || !/^[a-z0-9_-]{3,32}$/.test(username.toLowerCase())) return res.status(400).json({ error: 'Username must be 3-32 chars (letters, numbers, _, -)' });
+    if (typeof password !== 'string' || password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    const existing = await DashboardUser.findOne({ username: username.toLowerCase() });
     if (existing) return res.status(400).json({ error: 'Username already exists' });
+    const validRoles = ['developer', 'manager', 'moderator', 'support', 'analyst'];
+    const safeRole = validRoles.includes(role) ? role : 'support';
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await DashboardUser.create({
-      userId: `manual_${Date.now()}`, username, passwordHash, role: role || 'support',
+      userId: `manual_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, username: username.toLowerCase(), passwordHash, role: safeRole,
     });
     await AuditLog.create({ action: 'dashboard.user.create', category: 'auth', description: `Created user ${username}`, userId: req.user.id, username: req.user.username, target: username });
     res.json({ user: { _id: user._id, username: user.username, role: user.role, userId: user.userId } });
@@ -598,7 +914,10 @@ router.patch('/users/:userId', requireOwner, async (req, res) => {
     const { role } = req.body;
     const user = await DashboardUser.findById(req.params.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    if (role) user.role = role;
+    if (user.role === 'owner') return res.status(400).json({ error: 'Cannot change owner role' });
+    if (role === 'owner') return res.status(400).json({ error: 'Cannot assign owner role' });
+    const VALID_ROLES = ['developer', 'manager', 'moderator', 'support', 'analyst'];
+    if (role && VALID_ROLES.includes(role)) user.role = role;
     await user.save();
     await AuditLog.create({ action: 'dashboard.user.update', category: 'auth', description: `Updated user ${user.username}`, userId: req.user.id, username: req.user.username, target: user.username });
     res.json({ user: { _id: user._id, username: user.username, role: user.role } });
@@ -613,6 +932,7 @@ router.delete('/users/:userId', requireOwner, async (req, res) => {
     const user = await DashboardUser.findById(req.params.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.role === 'owner') return res.status(400).json({ error: 'Cannot delete owner' });
+    if (req.user.id === user._id.toString()) return res.status(400).json({ error: 'Cannot delete yourself' });
     await DashboardUser.findByIdAndDelete(req.params.userId);
     await AuditLog.create({ action: 'dashboard.user.delete', category: 'auth', description: `Deleted user ${user.username}`, userId: req.user.id, username: req.user.username, target: user.username });
     res.json({ success: true });

@@ -54,6 +54,7 @@ export default function ChannelSelector({ channels = [], value, onChange, filter
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
           className="input-dark appearance-none pr-10 cursor-pointer"
+          aria-label={label || 'Select a channel'}
         >
           <option value="">Select a channel...</option>
           {hasGroups

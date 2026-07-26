@@ -7,6 +7,7 @@ import {
   MessageSquare, Image as ImageIcon, Loader2, AlertTriangle,
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader.jsx';
+import Modal from '../components/Modal.jsx';
 
 function MessageBubble({ msg, channelId, botId, onEdit, onDelete }) {
   const [editing, setEditing] = useState(false);
@@ -142,26 +143,24 @@ function MessageBubble({ msg, channelId, botId, onEdit, onDelete }) {
       )}
 
       {deleting && (
-        <div className="fixed inset-0 bg-dark-950/70 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setDeleting(false)}>
-          <div className="glass p-6 max-w-sm w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-red-400" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-dark-100">Delete Message</p>
-                <p className="text-xs text-dark-400">This cannot be undone.</p>
-              </div>
+        <Modal onClose={() => setDeleting(false)} maxWidth="max-w-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-red-400" />
             </div>
-            <p className="text-xs text-dark-400 bg-dark-900/50 rounded-xl p-3 border border-dark-700/30 line-clamp-3">
-              {msg.content || '(embed message)'}
-            </p>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setDeleting(false)} className="btn-ghost text-sm">Cancel</button>
-              <button onClick={handleDelete} className="btn-danger text-sm">Delete</button>
+            <div>
+              <p className="text-sm font-semibold text-dark-100">Delete Message</p>
+              <p className="text-xs text-dark-400">This cannot be undone.</p>
             </div>
           </div>
-        </div>
+          <p className="text-xs text-dark-400 bg-dark-900/50 rounded-xl p-3 border border-dark-700/30 line-clamp-3">
+            {msg.content || '(embed message)'}
+          </p>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setDeleting(false)} className="btn-ghost text-sm">Cancel</button>
+            <button onClick={handleDelete} className="btn-danger text-sm">Delete</button>
+          </div>
+        </Modal>
       )}
     </div>
   );
@@ -179,34 +178,40 @@ export default function MessagesPage() {
   const [loadingChannels, setLoadingChannels] = useState(true);
   const [botId, setBotId] = useState(null);
   const messagesEndRef = useRef(null);
+  const fetchIdRef = useRef(0);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
         const [chData, overviewData] = await Promise.all([
           api.getChannels(),
           api.getOverview().catch(() => null),
         ]);
-        setChannels(chData.channels.filter((c) => c.type === 0));
-        setBotId(overviewData?.bot?.id || null);
-      } catch (err) {
-        toast('Failed to load channels', 'error');
+        if (!cancelled) {
+          setChannels((chData.channels || []).filter((c) => c.type === 0));
+          setBotId(overviewData?.bot?.id || null);
+        }
+      } catch {
+        if (!cancelled) toast('Failed to load channels', 'error');
       }
-      setLoadingChannels(false);
+      if (!cancelled) setLoadingChannels(false);
     })();
-  }, []);
+    return () => { cancelled = true; };
+  }, [toast]);
 
   const loadMessages = useCallback(async (channelId) => {
     if (!channelId) return;
+    const id = ++fetchIdRef.current;
     setLoading(true);
     setMessages([]);
     try {
       const data = await api.getMessages(channelId, 50);
-      setMessages(data.messages || []);
-    } catch (err) {
-      toast('Failed to load messages', 'error');
+      if (id === fetchIdRef.current) setMessages(data.messages || []);
+    } catch {
+      if (id === fetchIdRef.current) toast('Failed to load messages', 'error');
     }
-    setLoading(false);
+    if (id === fetchIdRef.current) setLoading(false);
   }, [toast]);
 
   useEffect(() => {
@@ -264,6 +269,7 @@ export default function MessagesPage() {
           onChange={(e) => setSelectedChannel(e.target.value)}
           className="input-dark w-auto min-w-[250px]"
           disabled={loadingChannels}
+          aria-label="Select a channel"
         >
           <option value="">
             {loadingChannels ? 'Loading channels...' : 'Select a channel'}

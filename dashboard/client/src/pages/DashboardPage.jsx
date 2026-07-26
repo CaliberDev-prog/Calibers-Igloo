@@ -119,8 +119,8 @@ export default function DashboardPage() {
       const overview = await api.getOverview();
       setData(overview);
       api.getAuditLogs({ limit: 8 }).then((d) => setAuditLogs(d.logs || [])).catch(() => {});
-    } catch (err) {
-      console.error('Failed to load overview:', err);
+    } catch {
+      toast('Failed to load dashboard data', 'error');
     }
     setLoading(false);
   };

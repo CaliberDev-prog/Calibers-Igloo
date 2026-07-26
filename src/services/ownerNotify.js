@@ -1,6 +1,6 @@
 import { EmbedBuilder } from 'discord.js';
 
-const OWNER_ID = process.env.OWNER_ID || '1293164546005012512';
+const OWNER_ID = process.env.OWNER_ID;
 
 let alertsEnabled = true;
 let cachedClient = null;
@@ -29,13 +29,14 @@ export async function notifyOwner(guild, action, details = {}) {
   const color = details.color || 0x75cff5;
 
   const fields = [];
-  if (details.user) fields.push({ name: 'User', value: details.user, inline: true });
-  if (details.performedBy) fields.push({ name: 'By', value: details.performedBy, inline: true });
-  if (details.department) fields.push({ name: 'Department', value: details.department, inline: true });
-  if (details.channel) fields.push({ name: 'Channel', value: details.channel, inline: true });
-  if (details.ticketId) fields.push({ name: 'Ticket', value: details.ticketId, inline: true });
-  if (details.reason) fields.push({ name: 'Reason', value: details.reason, inline: false });
-  if (details.extra) fields.push({ name: 'Details', value: details.extra, inline: false });
+  const truncate = (s, max = 1024) => String(s || '').slice(0, max);
+  if (details.user) fields.push({ name: 'User', value: truncate(details.user), inline: true });
+  if (details.performedBy) fields.push({ name: 'By', value: truncate(details.performedBy), inline: true });
+  if (details.department) fields.push({ name: 'Department', value: truncate(details.department), inline: true });
+  if (details.channel) fields.push({ name: 'Channel', value: truncate(details.channel), inline: true });
+  if (details.ticketId) fields.push({ name: 'Ticket', value: truncate(details.ticketId), inline: true });
+  if (details.reason) fields.push({ name: 'Reason', value: truncate(details.reason), inline: false });
+  if (details.extra) fields.push({ name: 'Details', value: truncate(details.extra), inline: false });
 
   const embed = new EmbedBuilder()
     .setTitle(action)

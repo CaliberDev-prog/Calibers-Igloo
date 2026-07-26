@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api.js';
 import { useToast } from '../components/Toast.jsx';
 import {
-  FileText, Search, RefreshCw, X, ChevronLeft, ChevronRight,
-  Download, Eye, CheckCircle2, XCircle, Clock, User,
+  FileText, Search, X, ChevronLeft, ChevronRight,
+  Eye, CheckCircle2, User, ExternalLink,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PageHeader from '../components/PageHeader.jsx';
 import EmptyState from '../components/EmptyState.jsx';
+import TranscriptViewerModal from '../components/TranscriptViewerModal.jsx';
 
 const DEPTS = {
   general: { name: 'General Support', emoji: '🛟' },
@@ -22,6 +23,7 @@ export default function TranscriptsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [viewingTicket, setViewingTicket] = useState(null);
 
   const fetchTickets = useCallback(async (p = 1) => {
     setLoading(true);
@@ -134,9 +136,20 @@ export default function TranscriptsPage() {
                       </span>
                     )}
                   </div>
-                  <Link to={`/tickets/${t.ticketId}`} className="btn-ghost p-1.5 text-dark-500 hover:text-ice-300 opacity-0 group-hover:opacity-100 transition-all" title="View ticket">
-                    <Eye className="w-4 h-4" />
-                  </Link>
+                  <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all">
+                    {hasTranscript && (
+                      <button
+                        onClick={() => setViewingTicket(t.ticketId)}
+                        className="p-1.5 rounded-lg text-dark-500 hover:text-ice-300 hover:bg-dark-700/50 transition-colors"
+                        title="View Transcript"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    )}
+                    <Link to={`/tickets/${t.ticketId}`} className="p-1.5 rounded-lg text-dark-500 hover:text-ice-300 hover:bg-dark-700/50 transition-colors" title="View Ticket">
+                      <ExternalLink className="w-4 h-4" />
+                    </Link>
+                  </div>
                 </div>
               );
             })}
@@ -157,6 +170,10 @@ export default function TranscriptsPage() {
           </div>
         )}
       </div>
+
+      {viewingTicket !== null && (
+        <TranscriptViewerModal ticketId={viewingTicket} onClose={() => setViewingTicket(null)} />
+      )}
     </div>
   );
 }

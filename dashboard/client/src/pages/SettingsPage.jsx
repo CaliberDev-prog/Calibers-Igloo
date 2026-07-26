@@ -1,8 +1,8 @@
 import { useAuth } from '../lib/auth.jsx';
 import { api } from '../lib/api.js';
 import { useToast } from '../components/Toast.jsx';
-import { Settings, Ticket, MessageSquare, Shield, Bell, Hash, Snowflake, Lock, Save, Check } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Settings, Ticket, Shield, Bell, Hash, Snowflake, Lock, Save, Check } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import ChannelSelector from '../components/ChannelSelector.jsx';
 import RoleSelector from '../components/RoleSelector.jsx';
 import PageHeader from '../components/PageHeader.jsx';
@@ -86,18 +86,23 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [configLoaded, setConfigLoaded] = useState(false);
+  const savedTimerRef = useRef(null);
 
   useEffect(() => {
+    let cancelled = false;
     Promise.all([
       api.getConfig().catch(() => ({})),
       api.getChannels().catch(() => ({ channels: [] })),
       api.getRoles().catch(() => ({ roles: [] })),
     ]).then(([config, chData, roleData]) => {
-      if (config?.settings) setSettings(config.settings);
-      setChannels(chData.channels || []);
-      setRoles(roleData.roles || []);
-      setConfigLoaded(true);
+      if (!cancelled) {
+        if (config?.settings) setSettings(config.settings);
+        setChannels(chData.channels || []);
+        setRoles(roleData.roles || []);
+        setConfigLoaded(true);
+      }
     });
+    return () => { cancelled = true; if (savedTimerRef.current) clearTimeout(savedTimerRef.current); };
   }, []);
 
   const current = SECTIONS.find((s) => s.id === activeSection);
@@ -113,7 +118,8 @@ export default function SettingsPage() {
       await api.saveConfig(settings);
       toast('Settings saved successfully!', 'success');
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setSaved(false), 3000);
     } catch {
       toast('Failed to save settings', 'error');
     }
@@ -132,7 +138,7 @@ export default function SettingsPage() {
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         title="Settings"
-        subtitle={isOwner ? 'Full access — all settings editable' : 'View-only access'}
+        subtitle={isOwner ? 'Full access: all settings editable' : 'View-only access'}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

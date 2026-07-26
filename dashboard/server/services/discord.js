@@ -1,14 +1,23 @@
 const BASE = 'https://discord.com/api/v10';
 
 function headers() {
-  return { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` };
+  const token = process.env.DISCORD_BOT_TOKEN;
+  if (!token) throw new Error('DISCORD_BOT_TOKEN not configured');
+  return { Authorization: `Bot ${token}` };
 }
 
 const GUILD_ID = process.env.DISCORD_GUILD_ID;
+if (!GUILD_ID) {
+  console.warn('[DISCORD] DISCORD_GUILD_ID not set. Guild-specific API calls will be unavailable.');
+}
 
 async function discordFetch(path) {
   const res = await fetch(`${BASE}${path}`, { headers: headers() });
-  if (!res.ok) throw new Error(`Discord API ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    console.error(`[Discord] ${res.status} ${path}:`, text.slice(0, 200));
+    throw new Error('Discord API request failed');
+  }
   return res.json();
 }
 
@@ -18,7 +27,11 @@ async function discordMethod(method, path, body) {
     headers: { ...headers(), 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) throw new Error(`Discord API ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    console.error(`[Discord] ${res.status} ${method} ${path}:`, text.slice(0, 200));
+    throw new Error('Discord API request failed');
+  }
   const text = await res.text();
   return text ? JSON.parse(text) : {};
 }
@@ -80,6 +93,10 @@ export async function getMember(userId) {
   } catch {
     return null;
   }
+}
+
+export async function getMembers(limit = 50, after = '0') {
+  return discordFetch(`/guilds/${GUILD_ID}/members?limit=${limit}&after=${after}`);
 }
 
 export async function deleteChannel(channelId) {

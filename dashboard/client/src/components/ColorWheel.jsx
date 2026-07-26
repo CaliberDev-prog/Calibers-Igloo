@@ -107,10 +107,10 @@ export default function ColorWheel({ value = '#75cff5', onChange, label }) {
 
   const currentHex = hslToHex(hsl.h, hsl.s, hsl.l);
   const wheelR = 70;
+  const outerR = wheelR - 2;
   const innerR = wheelR * 0.55;
   const selectorAngle = (hsl.h - 90) * Math.PI / 180;
   const selectorDist = innerR + (outerR - innerR) * 0.5;
-  const outerR2 = wheelR - 2;
 
   const PRESETS = [
     '#75cff5', '#57f287', '#fee75c', '#eb459e', '#ed4245',

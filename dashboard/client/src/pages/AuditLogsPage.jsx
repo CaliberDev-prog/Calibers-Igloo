@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api.js';
 import { useToast } from '../components/Toast.jsx';
 import {
-  Search, Filter, Clock, User, Hash, Shield, MessageSquare,
-  ChevronLeft, ChevronRight, RefreshCw, X, FileText,
+  Search, User, Hash, Shield, MessageSquare,
+  ChevronLeft, ChevronRight, X, FileText,
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader.jsx';
 import EmptyState from '../components/EmptyState.jsx';
@@ -20,11 +20,11 @@ const CATEGORIES = {
 };
 
 const ACTION_ICONS = {
-  login: 'User', logout: 'User', 'ticket.create': 'FileText', 'ticket.close': 'FileText',
-  'ticket.delete': 'FileText', 'message.send': 'MessageSquare', 'message.edit': 'MessageSquare',
-  'message.delete': 'MessageSquare', 'config.update': 'Hash', 'blacklist.add': 'Shield',
-  'blacklist.remove': 'Shield', 'role.edit': 'Hash', 'role.delete': 'Hash',
-  'channel.rename': 'Hash', 'dashboard.user.create': 'User', 'dashboard.user.delete': 'User',
+  login: User, logout: User, 'ticket.create': FileText, 'ticket.close': FileText,
+  'ticket.delete': FileText, 'message.send': MessageSquare, 'message.edit': MessageSquare,
+  'message.delete': MessageSquare, 'config.update': Hash, 'blacklist.add': Shield,
+  'blacklist.remove': Shield, 'role.edit': Hash, 'role.delete': Hash,
+  'channel.rename': Hash, 'dashboard.user.create': User, 'dashboard.user.delete': User,
 };
 
 export default function AuditLogsPage() {
@@ -93,7 +93,7 @@ export default function AuditLogsPage() {
             </button>
           )}
         </div>
-        <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }} className="input-dark w-auto min-w-[140px]">
+        <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }} className="input-dark w-auto min-w-[140px]" aria-label="Category filter">
           <option value="all">All Categories</option>
           {Object.entries(CATEGORIES).map(([id, cat]) => (
             <option key={id} value={id}>{cat.label}</option>
@@ -119,7 +119,7 @@ export default function AuditLogsPage() {
               return (
                 <div key={log._id} className="px-4 py-3 flex items-center gap-4 hover:bg-dark-700/10 transition-colors">
                   <div className="w-8 h-8 rounded-lg bg-dark-800/50 flex items-center justify-center flex-shrink-0">
-                    <Hash className="w-4 h-4 text-dark-500" />
+                    {(() => { const Icon = ACTION_ICONS[log.action] || Hash; return <Icon className="w-4 h-4 text-dark-500" />; })()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">

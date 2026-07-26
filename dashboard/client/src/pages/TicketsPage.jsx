@@ -53,8 +53,8 @@ export default function TicketsPage() {
       const data = await api.getTickets(params);
       setTickets(data.tickets);
       setPagination(data.pagination);
-    } catch (err) {
-      console.error('Failed to fetch tickets:', err);
+    } catch {
+      toast('Failed to load tickets', 'error');
     }
     setLoading(false);
   }, [statusFilter, deptFilter, sort, order, search]);
@@ -112,14 +112,14 @@ export default function TicketsPage() {
           )}
         </div>
 
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="input-dark w-auto min-w-[130px] text-sm">
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="input-dark w-auto min-w-[130px] text-sm" aria-label="Status filter">
           <option value="all">All Status</option>
           <option value="open">Open</option>
           <option value="closed">Closed</option>
           <option value="deleted">Deleted</option>
         </select>
 
-        <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="input-dark w-auto min-w-[150px] text-sm">
+        <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="input-dark w-auto min-w-[150px] text-sm" aria-label="Department filter">
           <option value="all">All Departments</option>
           {Object.entries(DEPTS).map(([id, d]) => (
             <option key={id} value={id}>{d.emoji} {d.name}</option>

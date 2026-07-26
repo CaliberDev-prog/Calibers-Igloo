@@ -2,8 +2,13 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Ticket, MessageSquare, Server, BarChart3, Shield,
-  Settings, Activity, Terminal, Hash, Users, X,
+  Settings, Activity, Terminal, Hash, Users, X, LayoutDashboard,
 } from 'lucide-react';
+
+const ICON_COMPONENTS = {
+  LayoutDashboard, Ticket, MessageSquare, Server, BarChart3, Shield,
+  Terminal, Activity, Settings, Hash, Users,
+};
 
 const PAGES = [
   { path: '/dashboard', label: 'Overview', icon: 'LayoutDashboard', keywords: 'home main command center' },
@@ -18,12 +23,6 @@ const PAGES = [
   { path: '/audit-logs', label: 'Audit Logs', icon: 'Hash', keywords: 'history actions log' },
   { path: '/users', label: 'Dashboard Users', icon: 'Users', keywords: 'accounts staff members' },
 ];
-
-const ICON_MAP = {
-  LayoutDashboard: 'LayoutDashboard', Ticket: 'Ticket', MessageSquare: 'MessageSquare',
-  Server: 'Server', BarChart3: 'BarChart3', Shield: 'Shield', Terminal: 'Terminal',
-  Activity: 'Activity', Settings: 'Settings', Hash: 'Hash', Users: 'Users',
-};
 
 export default function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -117,7 +116,7 @@ export default function CommandPalette() {
             </div>
           ) : (
             filtered.map((page, i) => {
-              const IconComp = require('lucide-react')[page.icon];
+              const IconComp = ICON_COMPONENTS[page.icon];
               return (
                 <button
                   key={page.path}

@@ -6,15 +6,17 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
-const OWNER_ID = process.env.OWNER_ID || '1293164546005012512';
+const JWT_ALGORITHM = 'HS256';
 const STAFF_ROLES = ['owner', 'developer', 'manager', 'moderator', 'support', 'analyst'];
+
+export { STAFF_ROLES };
 
 export function authenticate(req, res, next) {
   const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM] });
     req.user = decoded;
     next();
   } catch {
@@ -23,7 +25,7 @@ export function authenticate(req, res, next) {
 }
 
 export function requireOwner(req, res, next) {
-  if (req.user.role !== 'owner') return res.status(403).json({ error: 'Owner access required' });
+  if (!req.user || req.user.role !== 'owner') return res.status(403).json({ error: 'Owner access required' });
   next();
 }
 
@@ -39,5 +41,5 @@ export function generateToken(user) {
     id: user.id,
     username: user.username,
     role: user.role,
-  }, JWT_SECRET, { expiresIn: '7d' });
+  }, JWT_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: '7d' });
 }

@@ -74,9 +74,7 @@ async function handleDepartmentSelect(interaction, departmentId) {
     return interaction.reply({ content: '❌ Unknown or disabled department.', ephemeral: true });
   }
 
-  if (pendingCreations.has(interaction.user.id)) {
-    return interaction.reply({ content: '❌ You already have a ticket creation in progress.', ephemeral: true });
-  }
+  pendingCreations.delete(interaction.user.id);
 
   try {
     const { checkBlacklist, getActiveTicketCount } = await import('../../utils/ticketValidation.js');
@@ -371,7 +369,7 @@ export async function handleCloseRequestModal(interaction) {
     const reasonText = reason ? `\n**Reason:** ${reason}` : '';
     const embed = new EmbedBuilder()
       .setTitle('📋 Close Requested')
-      .setDescription(`<@${ticket.creatorId}> - ${interaction.user} is requesting to close this ticket.${reasonText}\nStaff, confirm or cancel below.`)
+      .setDescription(`${interaction.user} is requesting to close this ticket.${reasonText}\nStaff, confirm or cancel below.`)
       .setColor(ticketConfig.colors.warn);
 
     const row = new ActionRowBuilder().addComponents(
@@ -385,7 +383,27 @@ export async function handleCloseRequestModal(interaction) {
         .setStyle(ButtonStyle.Secondary)
     );
 
-    await interaction.channel.send({ embeds: [embed], components: [row] });
+    await interaction.channel.send({
+      content: `<@${ticket.creatorId}>`,
+      allowedMentions: { users: [ticket.creatorId] },
+      embeds: [embed],
+      components: [row],
+    });
+
+    const opener = await interaction.guild.members.fetch(ticket.creatorId).catch(() => null);
+    if (opener) {
+      const dmEmbed = new EmbedBuilder()
+        .setTitle('📋 Close Requested')
+        .setDescription(`Your ticket **#${String(ticket.ticketId).padStart(4, '0')}** has been requested to close by a staff member.\n\nIf you still need help, send a message in the ticket before it is closed.`)
+        .setColor(ticketConfig.colors.warn)
+        .setTimestamp();
+      const { ActionRowBuilder: AR, ButtonBuilder: BT, ButtonStyle: BS } = await import('discord.js');
+      await opener.send({
+        embeds: [dmEmbed],
+        components: [new AR().addComponents(BT().setLabel('Open Ticket').setStyle(BS.Link).setURL(`https://discord.com/channels/${interaction.guild.id}/${interaction.channel.id}`))],
+      }).catch(() => null);
+    }
+
     await interaction.editReply({ content: '✅ Close request sent.' });
   } catch (err) {
     await interaction.editReply({ content: `❌ ${err.message}` });

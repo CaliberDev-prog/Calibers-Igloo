@@ -527,7 +527,7 @@ export async function sendTranscriptDM(guild, creatorId, attachment, ticket) {
     .addFields(
       { name: 'Ticket', value: `#${String(t.ticketId).padStart(4, '0')}`, inline: true },
       { name: 'Department', value: `${deptEmoji(t.departmentId)} ${dept?.name || t.departmentId}`, inline: true },
-      { name: 'Closed By', value: t.closedBy || 'Unknown', inline: true },
+      { name: 'Closed By', value: t.closedById ? `<@${t.closedById}>` : (t.closedBy || 'Unknown'), inline: true },
       { name: 'Close Reason', value: (t.closeReason || 'No reason provided').slice(0, 1024), inline: false },
       { name: 'Opened', value: fmtDate(t.createdAt), inline: true },
       { name: 'Closed', value: fmtDate(t.closedAt), inline: true }
