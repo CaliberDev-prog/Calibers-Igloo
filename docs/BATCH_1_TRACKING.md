@@ -15,7 +15,7 @@
 | 3 | #14 | Auth to all protected routes | **DONE (no-code)** | #6 | Verified — tests prove it |
 | 4 | #12 | Bot command permission validation | **DONE** | #6 | Fixed 5 issues, 52 tests |
 | 5 | #1 | API input validation gaps | **DONE** | None | 22 endpoints validated, 28 tests |
-| 6 | #8 | NoSQL injection prevention | Pending | #1 | No mongo-sanitize |
+| 6 | #8 | NoSQL injection prevention | **DONE** | #1 | mongo-sanitize middleware, 26 tests |
 | 7 | #7 | XSS sanitization | Pending | None | No DOMPurify |
 | 8 | #9 | File upload / transcript security | Pending | #7 | Transcript CSP exists |
 | 9 | #3 | Harden CORS | Pending | None | Already done — may close |
@@ -48,7 +48,7 @@
 - ~~No refresh token pattern~~ **DONE in #6**
 - ~~No token revocation/blacklist~~ **DONE in #15**
 - No CSRF tokens (SameSite=lax only)
-- No mongo-sanitize middleware
+- ~~No mongo-sanitize middleware~~ **DONE in #8**
 - No DOMPurify for transcript rendering
 - Some endpoints missing channelId/ObjectId validation
 - Audit logging missing on channels, roles, messages, config
@@ -115,7 +115,7 @@
 | No refresh token mechanism | High | #15 | **FIXED in #6** |
 | No token revocation (logout just clears cookie) | High | #15 | **FIXED in #15** |
 | No CSRF tokens on state-changing endpoints | Medium | #5 | Pending |
-| No mongo-sanitize on request bodies | Medium | #8 | Pending |
+| No mongo-sanitize on request bodies | Medium | #8 | **FIXED in #8** |
 | Transcript uses dangerouslySetInnerHTML without DOMPurify | Medium | #7 | Pending |
 | Some endpoints skip channelId validation | Medium | #1 | Pending |
 | MongoDB connection has no TLS | Low | #13 | Pending |
