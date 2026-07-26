@@ -12,7 +12,7 @@
 |---|--------|-------|--------|-------------|----------|
 | 1 | #6 | Audit JWT authentication flow | **DONE** | None | Commit 36bfd2b |
 | 2 | #15 | Session security best practices | **DONE** | #6 | Commit 7387b96 |
-| 3 | #14 | Auth to all protected routes | Pending | #6 | Mostly done already |
+| 3 | #14 | Auth to all protected routes | **DONE (no-code)** | #6 | Verified — tests prove it |
 | 4 | #12 | Bot command permission validation | Pending | #6 | Needs per-command audit |
 | 5 | #1 | API input validation gaps | Pending | None | Partially done |
 | 6 | #8 | NoSQL injection prevention | Pending | #1 | No mongo-sanitize |
