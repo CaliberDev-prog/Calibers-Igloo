@@ -10,7 +10,7 @@
 
 | # | GitHub | Issue | Status | Dependencies | Findings |
 |---|--------|-------|--------|-------------|----------|
-| 1 | #6 | Audit JWT authentication flow | **NEXT** | None | See below |
+| 1 | #6 | Audit JWT authentication flow | **DONE** | None | Commit 36bfd2b |
 | 2 | #15 | Session security best practices | Pending | #6 | JWT refresh tokens |
 | 3 | #14 | Auth to all protected routes | Pending | #6 | Mostly done already |
 | 4 | #12 | Bot command permission validation | Pending | #6 | Needs per-command audit |
@@ -44,9 +44,9 @@
 - Audit logging on tickets, blacklists, giveaways, users
 
 ### What Needs Work
-- JWT expiry too long (7d → 24h)
-- No refresh token pattern
-- No token revocation/blacklist
+- ~~JWT expiry too long (7d → 24h)~~ **DONE in #6**
+- ~~No refresh token pattern~~ **DONE in #6**
+- No token revocation/blacklist (future improvement)
 - No CSRF tokens (SameSite=lax only)
 - No mongo-sanitize middleware
 - No DOMPurify for transcript rendering
