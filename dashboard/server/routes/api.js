@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { authenticate, requireOwner, requireStaff, STAFF_ROLES } from '../middleware/auth.js';
+import { authenticate, requireOwner, requireStaff, STAFF_ROLES, revokeAllUserTokens } from '../middleware/auth.js';
 import * as discord from '../services/discord.js';
 import AuditLog from '../models/AuditLog.js';
 import DashboardUser from '../models/DashboardUser.js';
@@ -917,8 +917,10 @@ router.patch('/users/:userId', requireOwner, async (req, res) => {
     if (user.role === 'owner') return res.status(400).json({ error: 'Cannot change owner role' });
     if (role === 'owner') return res.status(400).json({ error: 'Cannot assign owner role' });
     const VALID_ROLES = ['developer', 'manager', 'moderator', 'support', 'analyst'];
+    const roleChanged = role && VALID_ROLES.includes(role) && user.role !== role;
     if (role && VALID_ROLES.includes(role)) user.role = role;
     await user.save();
+    if (roleChanged) await revokeAllUserTokens(user.userId, 'role_change');
     await AuditLog.create({ action: 'dashboard.user.update', category: 'auth', description: `Updated user ${user.username}`, userId: req.user.id, username: req.user.username, target: user.username });
     res.json({ user: { _id: user._id, username: user.username, role: user.role } });
   } catch (err) {
@@ -933,6 +935,7 @@ router.delete('/users/:userId', requireOwner, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.role === 'owner') return res.status(400).json({ error: 'Cannot delete owner' });
     if (req.user.id === user._id.toString()) return res.status(400).json({ error: 'Cannot delete yourself' });
+    await revokeAllUserTokens(user.userId, 'admin_revoke');
     await DashboardUser.findByIdAndDelete(req.params.userId);
     await AuditLog.create({ action: 'dashboard.user.delete', category: 'auth', description: `Deleted user ${user.username}`, userId: req.user.id, username: req.user.username, target: user.username });
     res.json({ success: true });

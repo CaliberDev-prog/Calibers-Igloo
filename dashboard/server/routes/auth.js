@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import DashboardUser from '../models/DashboardUser.js';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken, authenticate, ACCESS_TOKEN_EXPIRY, REFRESH_TOKEN_EXPIRY } from '../middleware/auth.js';
+import {
+  generateAccessToken, generateRefreshToken, verifyRefreshToken,
+  authenticate, isTokenRevoked, revokeToken, revokeAllUserTokens,
+} from '../middleware/auth.js';
 
 const router = Router();
 
@@ -13,6 +16,11 @@ const COOKIE_OPTIONS = {
   sameSite: 'lax',
   path: '/',
 };
+
+function clearAuthCookies(res) {
+  res.clearCookie('token', COOKIE_OPTIONS);
+  res.clearCookie('refreshToken', COOKIE_OPTIONS);
+}
 
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
@@ -52,34 +60,44 @@ router.post('/login', async (req, res) => {
       user: { id: user.userId, username: user.username, role: effectiveRole },
     });
   } catch (err) {
-    console.error('[AUTH] Login error:', err.message);
+    console.error('[AUTH] Login error');
     res.status(500).json({ error: 'Internal error' });
   }
 });
 
 router.post('/refresh', async (req, res) => {
   const refreshToken = req.cookies?.refreshToken;
-  if (!refreshToken) return res.status(401).json({ error: 'No refresh token' });
+  if (!refreshToken) return res.status(401).json({ error: 'Not authenticated' });
 
   const decoded = verifyRefreshToken(refreshToken);
   if (!decoded) {
-    res.clearCookie('refreshToken', COOKIE_OPTIONS);
-    return res.status(401).json({ error: 'Invalid refresh token' });
+    clearAuthCookies(res);
+    return res.status(401).json({ error: 'Not authenticated' });
   }
 
   try {
+    const alreadyRevoked = await isTokenRevoked(decoded.jti);
+    if (alreadyRevoked) {
+      await revokeAllUserTokens(decoded.id, 'replay');
+      clearAuthCookies(res);
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
     const user = await DashboardUser.findOne({ userId: decoded.id });
     if (!user) {
-      res.clearCookie('token', COOKIE_OPTIONS);
-      res.clearCookie('refreshToken', COOKIE_OPTIONS);
-      return res.status(401).json({ error: 'User not found' });
+      await revokeAllUserTokens(decoded.id, 'replay');
+      clearAuthCookies(res);
+      return res.status(401).json({ error: 'Not authenticated' });
     }
+
+    await revokeToken(decoded.jti, decoded.id, 'rotation');
 
     const effectiveRole = user.userId === OWNER_ID ? 'owner' : user.role;
     const tokenPayload = { id: user.userId, username: user.username, role: effectiveRole };
+    const family = decoded.family || decoded.jti;
 
     const newAccessToken = generateAccessToken(tokenPayload);
-    const newRefreshToken = generateRefreshToken(tokenPayload);
+    const newRefreshToken = generateRefreshToken(tokenPayload, family);
 
     res.cookie('token', newAccessToken, {
       ...COOKIE_OPTIONS,
@@ -93,7 +111,7 @@ router.post('/refresh', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('[AUTH] Refresh error:', err.message);
+    console.error('[AUTH] Refresh error');
     res.status(500).json({ error: 'Internal error' });
   }
 });
@@ -102,9 +120,15 @@ router.get('/me', authenticate, (req, res) => {
   res.json({ user: req.user });
 });
 
-router.post('/logout', (req, res) => {
-  res.clearCookie('token', COOKIE_OPTIONS);
-  res.clearCookie('refreshToken', COOKIE_OPTIONS);
+router.post('/logout', async (req, res) => {
+  const refreshToken = req.cookies?.refreshToken;
+  if (refreshToken) {
+    const decoded = verifyRefreshToken(refreshToken);
+    if (decoded) {
+      await revokeToken(decoded.jti, decoded.id, 'logout');
+    }
+  }
+  clearAuthCookies(res);
   res.json({ success: true });
 });
 

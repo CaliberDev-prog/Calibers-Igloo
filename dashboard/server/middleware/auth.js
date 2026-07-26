@@ -19,7 +19,57 @@ const STAFF_ROLES = ['owner', 'developer', 'manager', 'moderator', 'support', 'a
 
 const ALLOWED_TOKEN_FIELDS = new Set(['id', 'username', 'role', 'iat', 'exp', 'jti']);
 
+let RevokedToken = null;
+
+function getRevokedTokenModel() {
+  if (!RevokedToken) {
+    try {
+      const mod = await import('../models/RevokedToken.js');
+      RevokedToken = mod.default;
+    } catch {
+      return null;
+    }
+  }
+  return RevokedToken;
+}
+
 export { STAFF_ROLES, ACCESS_TOKEN_EXPIRY, REFRESH_TOKEN_EXPIRY };
+
+export async function isTokenRevoked(jti) {
+  const Model = await getRevokedTokenModel();
+  if (!Model) return false;
+  try {
+    const doc = await Model.findOne({ jti }).lean();
+    return !!doc;
+  } catch {
+    return false;
+  }
+}
+
+export async function revokeToken(jti, userId, reason) {
+  const Model = await getRevokedTokenModel();
+  if (!Model || !jti) return;
+  try {
+    await Model.create({ jti, userId, reason });
+  } catch (err) {
+    if (err.code !== 11000) {
+      console.error('[AUTH] Failed to revoke token:', err.message);
+    }
+  }
+}
+
+export async function revokeAllUserTokens(userId, reason) {
+  const Model = await getRevokedTokenModel();
+  if (!Model) return;
+  try {
+    const dummyJti = `bulk_${crypto.randomUUID()}`;
+    await Model.create({ jti: dummyJti, userId, reason });
+  } catch (err) {
+    if (err.code !== 11000) {
+      console.error('[AUTH] Failed to revoke tokens:', err.message);
+    }
+  }
+}
 
 export function authenticate(req, res, next) {
   const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
@@ -49,13 +99,7 @@ export function authenticate(req, res, next) {
     req.user = decoded;
     next();
   } catch (err) {
-    if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token expired' });
-    }
-    if (err.name === 'JsonWebTokenError') {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    return res.status(401).json({ error: 'Token verification failed' });
+    return res.status(401).json({ error: 'Not authenticated' });
   }
 }
 
@@ -80,10 +124,11 @@ export function generateAccessToken(user) {
   }, JWT_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: ACCESS_TOKEN_EXPIRY });
 }
 
-export function generateRefreshToken(user) {
+export function generateRefreshToken(user, family) {
   return jwt.sign({
     id: user.id,
     jti: crypto.randomUUID(),
+    family: family || crypto.randomUUID(),
     type: 'refresh',
   }, JWT_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: REFRESH_TOKEN_EXPIRY });
 }
