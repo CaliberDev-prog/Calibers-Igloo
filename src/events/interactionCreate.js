@@ -12,7 +12,7 @@ import {
   handleTicketModal,
   handleCloseReasonModal,
   handleCloseRequestModal,
-} from '../components/buttons/ticketButtons.js';
+} from '../components/buttons/ticket/index.js';
 import { logError } from '../services/ticketLoggingService.js';
 
 export async function handleInteraction(interaction, commands) {

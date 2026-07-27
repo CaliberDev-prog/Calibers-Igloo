@@ -243,56 +243,56 @@ describe('Command permission validation — prefix commands', () => {
 
 describe('Command permission validation — button handlers', () => {
   it('ticket:close requires isStaff', () => {
-    const src = readSrc('src/components/buttons/ticketButtons.js');
-    const fn = src.substring(src.indexOf('async function handleClose'), src.indexOf('export async function handleCloseReasonModal'));
+    const src = readSrc('src/components/buttons/ticket/close.js');
+    const fn = src.substring(src.indexOf('export async function handleClose'), src.indexOf('export async function handleCloseReasonModal'));
     assert.ok(fn.includes('isStaff'), 'ticket:close must check isStaff');
   });
 
   it('ticket:close-reason requires isStaff', () => {
-    const src = readSrc('src/components/buttons/ticketButtons.js');
+    const src = readSrc('src/components/buttons/ticket/close.js');
     const fn = src.substring(src.indexOf('export async function handleCloseReasonModal'), src.indexOf('async function handleConfirmCloseButton'));
     assert.ok(fn.includes('isStaff'), 'ticket:close-reason must check isStaff');
   });
 
   it('ticket:confirm-close requires isStaff', () => {
-    const src = readSrc('src/components/buttons/ticketButtons.js');
+    const src = readSrc('src/components/buttons/ticket/close.js');
     const fn = src.substring(src.indexOf('async function handleConfirmCloseButton'), src.indexOf('async function generateAndSendTranscript'));
     assert.ok(fn.includes('isStaff'), 'ticket:confirm-close must check isStaff');
   });
 
   it('ticket:alert requires isStaff', () => {
-    const src = readSrc('src/components/buttons/ticketButtons.js');
-    const fn = src.substring(src.indexOf('async function handleAlert'), src.indexOf('async function handleForceAdd'));
+    const src = readSrc('src/components/buttons/ticket/actions.js');
+    const fn = src.substring(src.indexOf('export async function handleAlert'), src.indexOf('export async function handleForceAdd'));
     assert.ok(fn.includes('isStaff'), 'ticket:alert must check isStaff');
   });
 
   it('ticket:force-add requires isStaff', () => {
-    const src = readSrc('src/components/buttons/ticketButtons.js');
-    const fn = src.substring(src.indexOf('async function handleForceAdd'), src.indexOf('async function handleClaim'));
+    const src = readSrc('src/components/buttons/ticket/actions.js');
+    const fn = src.substring(src.indexOf('export async function handleForceAdd'), src.indexOf('export async function handleClaim'));
     assert.ok(fn.includes('isStaff'), 'ticket:force-add must check isStaff');
   });
 
   it('ticket:claim requires isStaff', () => {
-    const src = readSrc('src/components/buttons/ticketButtons.js');
-    const fn = src.substring(src.indexOf('async function handleClaim'), src.indexOf('async function handleUnclaim'));
+    const src = readSrc('src/components/buttons/ticket/actions.js');
+    const fn = src.substring(src.indexOf('export async function handleClaim'), src.indexOf('export async function handleUnclaim'));
     assert.ok(fn.includes('isStaff'), 'ticket:claim must check isStaff');
   });
 
   it('ticket:unclaim requires isStaff', () => {
-    const src = readSrc('src/components/buttons/ticketButtons.js');
-    const fn = src.substring(src.indexOf('async function handleUnclaim'), src.indexOf('async function handleLock'));
+    const src = readSrc('src/components/buttons/ticket/actions.js');
+    const fn = src.substring(src.indexOf('export async function handleUnclaim'), src.indexOf('export async function handleLock'));
     assert.ok(fn.includes('isStaff'), 'ticket:unclaim must check isStaff');
   });
 
   it('ticket:lock requires isStaff', () => {
-    const src = readSrc('src/components/buttons/ticketButtons.js');
-    const fn = src.substring(src.indexOf('async function handleLock'), src.indexOf('async function handleUnlock'));
+    const src = readSrc('src/components/buttons/ticket/actions.js');
+    const fn = src.substring(src.indexOf('export async function handleLock'), src.indexOf('export async function handleUnlock'));
     assert.ok(fn.includes('isStaff'), 'ticket:lock must check isStaff');
   });
 
   it('ticket:unlock requires isStaff', () => {
-    const src = readSrc('src/components/buttons/ticketButtons.js');
-    const fn = src.substring(src.indexOf('async function handleUnlock'));
+    const src = readSrc('src/components/buttons/ticket/actions.js');
+    const fn = src.substring(src.indexOf('export async function handleUnlock'));
     assert.ok(fn.includes('isStaff'), 'ticket:unlock must check isStaff');
   });
 });
