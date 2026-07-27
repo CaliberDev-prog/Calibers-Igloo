@@ -37,6 +37,7 @@
 - [Appendix 1: Architecture Evolution](#appendix-1-architecture-evolution)
 - [Appendix 2: Final Polish Pass](#appendix-2-final-polish-pass)
 - [Appendix 3: AI Self Review](#appendix-3-ai-self-review)
+- [Appendix 4: Progress Reporting Requirements](#appendix-4-progress-reporting-requirements)
 
 ---
 
@@ -834,6 +835,92 @@ After every AI-generated change, verify:
 8. No performance regressions
 9. No accessibility regressions
 10. Code follows existing patterns
+
+---
+
+## Appendix 4: Progress Reporting Requirements
+
+Every implementation session must begin and end with a clear progress summary. This ensures every session leaves a readable engineering record so a future session can resume work without reconstructing context from commits.
+
+### Before Starting Work
+
+Before writing or modifying any code:
+
+- Briefly summarize the current project status.
+- State which batch, milestone, feature, or GitHub issue is being worked on.
+- Explain why it is the next logical step.
+- Outline the implementation plan in dependency order.
+- Mention any risks, assumptions, or prerequisites.
+- Do not begin coding until the plan has been presented and approved (when Plan Mode is active).
+
+### During Implementation
+
+Whenever a major feature or issue is completed:
+
+- Briefly explain what changed.
+- Explain why the change was made.
+- Mention any architectural decisions.
+- Highlight any files, modules, or components that were created, removed, or refactored.
+- Mention any behavior intentionally preserved for backward compatibility.
+- Report any unexpected issues encountered and how they were resolved.
+
+### End of Every Session
+
+Always provide a structured summary with these sections:
+
+#### Session Overview
+A concise summary (2-6 paragraphs) covering what was accomplished, what problems were solved, how architecture improved, and important implementation decisions. Do not only list commits -- explain overall impact.
+
+#### Features Completed
+A table of issues addressed in the session:
+
+| Issue | Description | Status |
+| ----- | ----------- | ------ |
+| #XX   | Feature     | Done   |
+
+#### Files Added
+List every new file created.
+
+#### Files Modified
+List major files modified and briefly describe what changed.
+
+#### Files Removed
+If applicable, list deleted files and explain why they were removed.
+
+#### Architectural Changes
+Summarize improvements: refactoring, dependency cleanup, new services, shared hooks, component extraction, performance improvements, security improvements.
+
+#### Testing Summary
+Always report:
+- Total passing tests
+- Failed tests
+- New tests added
+- Test files modified
+- Coverage improvements (if applicable)
+
+Never claim success without verifying the test suite.
+
+#### Git Summary
+Include commits created, GitHub issues closed, and milestones completed.
+
+#### Current Project Status
+Always report current batch, current milestone, overall roadmap progress, and remaining issues in the current batch.
+
+#### Next Recommended Task
+Recommend the next task based on dependency order. Explain why it should be next, what it depends on, any preparation required, and estimated implementation scope.
+
+#### Blockers
+If there are blockers, risks, technical debt, or follow-up work, list them. If there are none, state: **No blockers identified.**
+
+### Accuracy Requirements
+
+Never claim an issue, feature, milestone, or batch is complete unless:
+- The implementation is finished.
+- Tests pass.
+- Existing functionality has been verified.
+- No known regressions exist.
+
+If something is partially complete, clearly identify it as **In Progress** rather than **Complete**.
 
 ---
 
