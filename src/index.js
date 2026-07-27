@@ -27,7 +27,7 @@ import { checkGiveawayEnd, handleGiveawayReactionAdd, handleGiveawayReactionRemo
 import { ticketConfig } from './config/tickets.js';
 import { setClient } from './services/ownerNotify.js';
 import { getPrefix } from './services/prefixService.js';
-import { handleMessageUpdate, handleMessageDelete } from './services/messageLoggingService.js';
+import { registerMessageLogging } from './services/messageLoggingService.js';
 import { handlePurgeCommand, handleWarningCommand, handleSlowmodeCommand } from './commands/prefix/moderation.js';
 import * as staffaddCommand from './commands/staffadd.js';
 
@@ -51,6 +51,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.GuildInvites,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildModeration,
   ],
 });
 
@@ -168,12 +169,7 @@ client.on(Events.MessageReactionRemove, (reaction, user) => {
   handleGiveawayReactionRemove(reaction, user);
 });
 
-client.on(Events.MessageUpdate, (oldMessage, newMessage) => {
-  handleMessageUpdate(oldMessage, newMessage).catch(() => null);
-});
-client.on(Events.MessageDelete, (message) => {
-  handleMessageDelete(message).catch(() => null);
-});
+registerMessageLogging(client);
 
 client.on(Events.Error, console.error);
 
