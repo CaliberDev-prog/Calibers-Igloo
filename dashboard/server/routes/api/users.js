@@ -4,7 +4,7 @@ import { requireOwner } from '../../middleware/auth.js';
 import { revokeAllUserTokens } from '../../middleware/auth.js';
 import AuditLog from '../../models/AuditLog.js';
 import DashboardUser from '../../models/DashboardUser.js';
-import { isObjectId } from '../../../utils/validation.js';
+import { isObjectId } from '../../utils/validation.js';
 import { asyncHandler } from '../../middleware/asyncHandler.js';
 
 const router = Router();

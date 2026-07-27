@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { requireOwner, requireStaff } from '../../middleware/auth.js';
 import AuditLog from '../../models/AuditLog.js';
 import TicketBlacklist from '../../models/TicketBlacklist.js';
-import { isObjectId } from '../../../utils/validation.js';
-import { parsePagination } from '../../../utils/pagination.js';
+import { isObjectId } from '../../utils/validation.js';
+import { parsePagination } from '../../utils/pagination.js';
 import { asyncHandler } from '../../middleware/asyncHandler.js';
 
 const router = Router();

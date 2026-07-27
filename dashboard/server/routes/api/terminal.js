@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requireOwner } from '../../middleware/auth.js';
 import * as discord from '../../services/discord.js';
 import AuditLog from '../../models/AuditLog.js';
-import { isDiscordId } from '../../../utils/validation.js';
+import { isDiscordId } from '../../utils/validation.js';
 import { asyncHandler } from '../../middleware/asyncHandler.js';
 
 const router = Router();

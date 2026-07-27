@@ -3,8 +3,8 @@ import { requireOwner, requireStaff } from '../../middleware/auth.js';
 import * as discord from '../../services/discord.js';
 import AuditLog from '../../models/AuditLog.js';
 import Ticket from '../../models/Ticket.js';
-import { parseTicketId, isDiscordId } from '../../../utils/validation.js';
-import { sanitizeSearch, parsePagination } from '../../../utils/pagination.js';
+import { parseTicketId, isDiscordId } from '../../utils/validation.js';
+import { sanitizeSearch, parsePagination } from '../../utils/pagination.js';
 import { asyncHandler } from '../../middleware/asyncHandler.js';
 
 const router = Router();

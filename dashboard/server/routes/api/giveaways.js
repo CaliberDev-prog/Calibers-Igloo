@@ -3,8 +3,8 @@ import { requireOwner, requireStaff } from '../../middleware/auth.js';
 import * as discord from '../../services/discord.js';
 import AuditLog from '../../models/AuditLog.js';
 import Giveaway from '../../models/Giveaway.js';
-import { isObjectId } from '../../../utils/validation.js';
-import { parsePagination } from '../../../utils/pagination.js';
+import { isObjectId } from '../../utils/validation.js';
+import { parsePagination } from '../../utils/pagination.js';
 import { asyncHandler } from '../../middleware/asyncHandler.js';
 
 const router = Router();

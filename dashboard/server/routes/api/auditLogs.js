@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireOwner, requireStaff } from '../../middleware/auth.js';
 import AuditLog from '../../models/AuditLog.js';
-import { sanitizeSearch, parsePagination } from '../../../utils/pagination.js';
+import { sanitizeSearch, parsePagination } from '../../utils/pagination.js';
 import { asyncHandler } from '../../middleware/asyncHandler.js';
 
 const router = Router();

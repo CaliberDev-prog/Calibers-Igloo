@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireStaff } from '../../middleware/auth.js';
 import * as discord from '../../services/discord.js';
-import { isDiscordId } from '../../../utils/validation.js';
+import { isDiscordId } from '../../utils/validation.js';
 import { asyncHandler } from '../../middleware/asyncHandler.js';
 
 const router = Router();
