@@ -5,16 +5,14 @@ import { authenticate, requireOwner, requireStaff, STAFF_ROLES, revokeAllUserTok
 import * as discord from '../services/discord.js';
 import AuditLog from '../models/AuditLog.js';
 import DashboardUser from '../models/DashboardUser.js';
+import Ticket from '../models/Ticket.js';
+import TicketBlacklist from '../models/TicketBlacklist.js';
+import BotConfig from '../models/BotConfig.js';
+import Giveaway from '../models/Giveaway.js';
 import { isDiscordId, isObjectId, parseTicketId } from '../utils/validation.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 
 const router = Router();
-
-const Ticket = mongoose.model('Ticket', new mongoose.Schema({}, { strict: false }));
-const TicketBlacklist = mongoose.model('TicketBlacklist', new mongoose.Schema({}, { strict: false }));
-const Counter = mongoose.model('Counter', new mongoose.Schema({}, { strict: false }));
-const BotConfig = mongoose.model('BotConfig', new mongoose.Schema({}, { strict: false }));
-const Giveaway = mongoose.model('Giveaway', new mongoose.Schema({}, { strict: false }));
 
 function sanitizeSearch(str) {
   if (!str || typeof str !== 'string') return '';
