@@ -13,8 +13,7 @@ import { ticketConfig } from '../../config/tickets.js';
 import * as ticketService from '../../services/ticketService.js';
 import * as transcriptService from '../../services/transcriptService.js';
 import { isStaff, canManageTicket } from '../../utils/ticketPermissions.js';
-
-const COMPONENTS_V2 = 1 << 15;
+import { COMPONENTS_V2 } from '../../config/constants.js';
 
 function inTicket(interaction) {
   const categoryId = interaction.channel?.parentId;

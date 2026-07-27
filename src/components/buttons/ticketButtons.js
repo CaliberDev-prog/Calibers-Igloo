@@ -15,8 +15,8 @@ import * as transcriptService from '../../services/transcriptService.js';
 import { logError } from '../../services/ticketLoggingService.js';
 import { isStaff } from '../../utils/ticketPermissions.js';
 import { getDeptQuestionsForPage, getTotalPages, validateAllAnswers } from '../../utils/ticketValidation.js';
+import { COMPONENTS_V2 } from '../../config/constants.js';
 
-const COMPONENTS_V2 = 1 << 15;
 const pendingCreations = new Map();
 
 export async function handleTicketButton(interaction) {

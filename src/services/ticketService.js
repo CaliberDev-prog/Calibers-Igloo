@@ -28,8 +28,7 @@ import {
 } from '../utils/ticketValidation.js';
 import { isStaff } from '../utils/ticketPermissions.js';
 import { notifyOwner } from './ownerNotify.js';
-
-const COMPONENTS_V2 = 1 << 15;
+import { COMPONENTS_V2 } from '../config/constants.js';
 
 export function getDeptConfig(departmentId) {
   return ticketConfig.departments[departmentId] || null;
