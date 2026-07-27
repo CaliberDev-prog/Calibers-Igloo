@@ -131,6 +131,14 @@ try {
 app.use('/api/auth', authRoutes);
 app.use('/api', apiRoutes);
 
+// Centralized error handler — catches errors forwarded by asyncHandler
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, _next) => {
+  console.error('[API] Unhandled error:', err.message || err);
+  if (res.headersSent) return;
+  res.status(500).json({ error: 'Internal server error' });
+});
+
 app.get('/health', (req, res) => {
   res.json({
     status: dbConnected ? 'ok' : 'degraded',
