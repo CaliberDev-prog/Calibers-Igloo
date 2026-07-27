@@ -15,8 +15,6 @@ export async function connectMongo() {
       heartbeatFrequencyMS: 30000,
       maxPoolSize: 10,
       minPoolSize: 1,
-      keepAlive: true,
-      keepAliveInitialDelay: 30000,
     });
     connected = true;
     console.log('[MONGO] Connected to MongoDB');
