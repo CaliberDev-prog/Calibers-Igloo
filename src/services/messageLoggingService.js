@@ -15,8 +15,8 @@ const COLORS = {
 };
 
 const MAX_FIELD_LEN = 1024;
-const MAX_DESC_LEN = 4096;
 const AUDIT_LOG_TIMEOUT_MS = 5000;
+const IMAGE_EXTS = /\.(png|jpe?g|gif|webp)$/i;
 
 let logChannelCache = null;
 
@@ -43,15 +43,37 @@ function formatContent(content) {
   return truncate(esc(content));
 }
 
-function formatAttachments(attachments) {
-  if (!attachments || attachments.size === 0) return null;
-  return attachments.map((a) => `[${a.name}](${a.url}) (${formatFileSize(a.size)})`).join('\n');
-}
-
 function formatFileSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatAttachments(attachments) {
+  if (!attachments || attachments.size === 0) return null;
+  const lines = [];
+  for (const [, a] of attachments) {
+    const isImage = IMAGE_EXTS.test(a.name);
+    if (isImage) {
+      lines.push(`[${a.name}](${a.url}) (${formatFileSize(a.size)})`);
+    } else {
+      const mime = a.contentType || 'unknown type';
+      lines.push(`**${a.name}** \`${mime}\` ${formatFileSize(a.size)}\n${a.url}`);
+    }
+  }
+  return lines.join('\n\n');
+}
+
+function reuploadableAttachments(attachments) {
+  return [...attachments.values()].filter(
+    (a) => a.size < 8_000_000 && IMAGE_EXTS.test(a.name)
+  ).slice(0, 4);
+}
+
+function nonImageAttachments(attachments) {
+  return [...attachments.values()].filter(
+    (a) => !IMAGE_EXTS.test(a.name)
+  );
 }
 
 function formatEmbeds(embeds) {
@@ -76,6 +98,45 @@ function isContentOnlyMentionsDiff(oldContent, newContent) {
   return oldNormalized === newNormalized;
 }
 
+function getThreadContext(channel) {
+  if (!channel.isThread()) return null;
+  return {
+    name: channel.name,
+    id: channel.id,
+    parentId: channel.parentId,
+    parentName: channel.parent?.name || 'unknown',
+    archived: channel.archived,
+  };
+}
+
+async function fetchReplyContext(message) {
+  if (!message.reference) return null;
+
+  try {
+    const refChannel = message.guild.channels.cache.get(message.reference.channelId);
+    if (!refChannel?.isTextBased()) return null;
+
+    const replied = await refChannel.messages.fetch(message.reference.messageId).catch(() => null);
+    if (replied) {
+      return {
+        author: replied.author,
+        content: replied.content || '*[no text content]*',
+        link: `https://discord.com/channels/${message.guild.id}/${replied.channel.id}/${replied.id}`,
+        available: true,
+      };
+    }
+
+    return {
+      available: false,
+      id: message.reference.messageId,
+      channelId: message.reference.channelId,
+      guildId: message.guild.id,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchAuditLogWhoDeleted(message) {
   try {
     const logs = await message.guild.fetchAuditLogs({
@@ -98,6 +159,16 @@ async function fetchAuditLogWhoDeleted(message) {
     // Audit log fetch can fail due to permissions
   }
   return null;
+}
+
+function addThreadFields(embed, channel) {
+  const ctx = getThreadContext(channel);
+  if (!ctx) return;
+  embed.addFields(
+    { name: 'Thread', value: `${ctx.name}`, inline: true },
+    { name: 'Parent', value: `<#${ctx.parentId}>`, inline: true },
+    { name: 'Thread ID', value: ctx.id, inline: true },
+  );
 }
 
 export async function handleMessageUpdate(oldMessage, newMessage) {
@@ -137,6 +208,8 @@ export async function handleMessageUpdate(oldMessage, newMessage) {
     .setFooter({ text: `User ID: ${author.id} • Msg ID: ${oldMessage.id}` })
     .setTimestamp();
 
+  addThreadFields(embed, oldMessage.channel);
+
   channel.send({ embeds: [embed] }).catch(() => null);
 }
 
@@ -164,6 +237,26 @@ export async function handleMessageDelete(message) {
     .setFooter({ text: `User ID: ${author.id}` })
     .setTimestamp();
 
+  addThreadFields(embed, message.channel);
+
+  const reply = await fetchReplyContext(message);
+  if (reply) {
+    if (reply.available) {
+      const snippet = truncate(esc(reply.content), 150);
+      embed.addFields({
+        name: 'Replying To',
+        value: `**${reply.author.tag}** — ${snippet}\n[Jump](${reply.link})`,
+        inline: false,
+      });
+    } else {
+      embed.addFields({
+        name: 'Replying To',
+        value: `*[Message unavailable](https://discord.com/channels/${reply.guildId}/${reply.channelId}/${reply.id})*`,
+        inline: false,
+      });
+    }
+  }
+
   const contentFormatted = formatContent(message.content);
   if (contentFormatted && contentFormatted !== '*[no text content]*') {
     embed.addFields({ name: 'Content', value: contentFormatted, inline: false });
@@ -174,9 +267,15 @@ export async function handleMessageDelete(message) {
     embed.addFields({ name: `Attachments (${message.attachments.size})`, value: truncate(attachmentText), inline: false });
   }
 
+  const nonImages = nonImageAttachments(message.attachments);
+  if (nonImages.length > 0) {
+    const note = nonImages.map((a) => `**${a.name}** — ${formatFileSize(a.size)} (${a.contentType || 'unknown'})`).join('\n');
+    embed.addFields({ name: 'Files (not re-uploaded)', value: truncate(note), inline: false });
+  }
+
   const embedText = formatEmbeds(message.embeds);
   if (embedText) {
-    embed.addFields({ name: `Embeds (${message.embeds.length})`, value: truncate(embedText), inline: false });
+    embed.addFields({ name: `Embeds (${message.embedments.length})`, value: truncate(embedText), inline: false });
   }
 
   const stickerText = formatStickers(message.stickers);
@@ -193,12 +292,9 @@ export async function handleMessageDelete(message) {
     }
   }
 
+  const reuploadable = reuploadableAttachments(message.attachments);
   const attachmentFiles = [];
-  const cachedAttachments = [...message.attachments.values()].filter(
-    (a) => a.size < 8_000_000 && /\.(png|jpe?g|gif|webp)$/i.test(a.name)
-  ).slice(0, 4);
-
-  for (const att of cachedAttachments) {
+  for (const att of reuploadable) {
     const fetched = await att.fetch().catch(() => null);
     if (fetched) {
       attachmentFiles.push(new AttachmentBuilder(fetched.attachment, { name: att.name }));
@@ -231,6 +327,8 @@ export async function handleMessageDeleteBulk(messages) {
     )
     .setFooter({ text: `${totalDeleted} messages deleted` })
     .setTimestamp();
+
+  addThreadFields(embed, first.channel);
 
   const uniqueAuthors = new Map();
   for (const [, msg] of messages) {
