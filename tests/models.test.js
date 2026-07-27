@@ -70,20 +70,41 @@ describe('Dashboard model definitions', () => {
     assert.ok(paths.includes('requirementRoleId'), 'requirementRoleId field exists');
   });
 
-  it('api.js imports models from shared files (no inline definitions)', async () => {
+  it('no route file uses inline mongoose.model() definitions', async () => {
     const fs = await import('fs');
-    const apiContent = fs.readFileSync(
-      new URL('../dashboard/server/routes/api.js', import.meta.url),
+    const files = [
+      'dashboard/server/routes/api/tickets.js',
+      'dashboard/server/routes/api/blacklists.js',
+      'dashboard/server/routes/api/giveaways.js',
+      'dashboard/server/routes/api/config.js',
+    ];
+    for (const file of files) {
+      const content = fs.readFileSync(new URL('../' + file, import.meta.url), 'utf-8');
+      assert.ok(!content.includes("mongoose.model("), `${file} has no inline mongoose.model()`);
+    }
+  });
+
+  it('route files import models from shared model files', async () => {
+    const fs = await import('fs');
+    const ticketsContent = fs.readFileSync(
+      new URL('../dashboard/server/routes/api/tickets.js', import.meta.url),
       'utf-8'
     );
-    assert.ok(!apiContent.includes("mongoose.model('Ticket', new mongoose.Schema"), 'no inline Ticket model');
-    assert.ok(!apiContent.includes("mongoose.model('TicketBlacklist', new mongoose.Schema"), 'no inline TicketBlacklist model');
-    assert.ok(!apiContent.includes("mongoose.model('Counter', new mongoose.Schema"), 'no inline Counter model');
-    assert.ok(!apiContent.includes("mongoose.model('BotConfig', new mongoose.Schema"), 'no inline BotConfig model');
-    assert.ok(!apiContent.includes("mongoose.model('Giveaway', new mongoose.Schema"), 'no inline Giveaway model');
-    assert.ok(apiContent.includes("import Ticket from '../models/Ticket.js'"), 'imports shared Ticket');
-    assert.ok(apiContent.includes("import TicketBlacklist from '../models/TicketBlacklist.js'"), 'imports shared TicketBlacklist');
-    assert.ok(apiContent.includes("import BotConfig from '../models/BotConfig.js'"), 'imports shared BotConfig');
-    assert.ok(apiContent.includes("import Giveaway from '../models/Giveaway.js'"), 'imports shared Giveaway');
+    assert.ok(ticketsContent.includes("import Ticket from '../../models/Ticket.js'"), 'tickets.js imports shared Ticket');
+    const blacklistsContent = fs.readFileSync(
+      new URL('../dashboard/server/routes/api/blacklists.js', import.meta.url),
+      'utf-8'
+    );
+    assert.ok(blacklistsContent.includes("import TicketBlacklist from '../../models/TicketBlacklist.js'"), 'blacklists.js imports shared TicketBlacklist');
+    const giveawaysContent = fs.readFileSync(
+      new URL('../dashboard/server/routes/api/giveaways.js', import.meta.url),
+      'utf-8'
+    );
+    assert.ok(giveawaysContent.includes("import Giveaway from '../../models/Giveaway.js'"), 'giveaways.js imports shared Giveaway');
+    const configContent = fs.readFileSync(
+      new URL('../dashboard/server/routes/api/config.js', import.meta.url),
+      'utf-8'
+    );
+    assert.ok(configContent.includes("import BotConfig from '../../models/BotConfig.js'"), 'config.js imports shared BotConfig');
   });
 });

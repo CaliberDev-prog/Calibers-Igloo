@@ -123,32 +123,32 @@ describe('Transcript download — response headers', () => {
 
   it('transcript download sets nosniff header', async () => {
     const fs = await import('fs');
-    const content = fs.readFileSync('dashboard/server/routes/api.js', 'utf8');
+    const content = fs.readFileSync('dashboard/server/routes/api/tickets.js', 'utf8');
     assert.ok(content.includes("X-Content-Type-Options", 'nosniff'), 'nosniff header present');
   });
 
   it('transcript download sets Cache-Control: private, no-store', async () => {
     const fs = await import('fs');
-    const content = fs.readFileSync('dashboard/server/routes/api.js', 'utf8');
+    const content = fs.readFileSync('dashboard/server/routes/api/tickets.js', 'utf8');
     assert.ok(content.includes("'private, no-store'"), 'Cache-Control set to private, no-store');
   });
 
   it('transcript download sets charset=utf-8 in Content-Type', async () => {
     const fs = await import('fs');
-    const content = fs.readFileSync('dashboard/server/routes/api.js', 'utf8');
+    const content = fs.readFileSync('dashboard/server/routes/api/tickets.js', 'utf8');
     assert.ok(content.includes("text/html; charset=utf-8"), 'Content-Type includes charset');
   });
 
   it('transcript download has size limit check', async () => {
     const fs = await import('fs');
-    const content = fs.readFileSync('dashboard/server/routes/api.js', 'utf8');
+    const content = fs.readFileSync('dashboard/server/routes/api/tickets.js', 'utf8');
     assert.ok(content.includes('MAX_TRANSCRIPT_BYTES'), 'Size limit constant present');
     assert.ok(content.includes('413'), 'Returns 413 for oversized transcripts');
   });
 
   it('transcript download has fetch timeout', async () => {
     const fs = await import('fs');
-    const content = fs.readFileSync('dashboard/server/routes/api.js', 'utf8');
+    const content = fs.readFileSync('dashboard/server/routes/api/tickets.js', 'utf8');
     assert.ok(content.includes('AbortSignal.timeout'), 'Fetch has timeout');
   });
 });
@@ -207,7 +207,7 @@ describe('Transcript filename — source code sanitization', () => {
 
   it('api.js download also strips null bytes in filename', async () => {
     const fs = await import('fs');
-    const content = fs.readFileSync('dashboard/server/routes/api.js', 'utf8');
+    const content = fs.readFileSync('dashboard/server/routes/api/tickets.js', 'utf8');
     const downloadSection = content.slice(content.indexOf('/transcript/download'));
     assert.ok(downloadSection.includes('replace(/\\0/g'), 'Download endpoint strips null bytes');
   });
@@ -216,7 +216,7 @@ describe('Transcript filename — source code sanitization', () => {
 describe('Content-Disposition header — injection prevention', () => {
   it('filename is wrapped in double quotes', async () => {
     const fs = await import('fs');
-    const content = fs.readFileSync('dashboard/server/routes/api.js', 'utf8');
+    const content = fs.readFileSync('dashboard/server/routes/api/tickets.js', 'utf8');
     assert.ok(content.includes('filename="${safeFilename}"'), 'Filename in double quotes');
   });
 
