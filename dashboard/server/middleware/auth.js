@@ -21,7 +21,7 @@ const ALLOWED_TOKEN_FIELDS = new Set(['id', 'username', 'role', 'iat', 'exp', 'j
 
 let RevokedToken = null;
 
-function getRevokedTokenModel() {
+async function getRevokedTokenModel() {
   if (!RevokedToken) {
     try {
       const mod = await import('../models/RevokedToken.js');
