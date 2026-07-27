@@ -87,8 +87,27 @@ app.use((req, res, next) => {
   next();
 });
 
+if (IS_PROD) {
+  app.use((req, res, next) => {
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.path.startsWith('/api/') && !req.path.startsWith('/api/auth/')) {
+      const origin = req.headers.origin;
+      if (origin && origin !== CLIENT_URL) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const contentType = req.headers['content-type'] || '';
+      if (!contentType.includes('application/json')) {
+        return res.status(415).json({ error: 'Unsupported Media Type' });
+      }
+    }
+    next();
+  });
+}
+
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 15, message: { error: 'Too many login attempts' } });
 app.use('/api/auth/login', loginLimiter);
+
+const refreshLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'Too many refresh attempts' } });
+app.use('/api/auth/refresh', refreshLimiter);
 
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 500 });
 app.use('/api/', apiLimiter);

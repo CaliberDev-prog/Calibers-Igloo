@@ -10,7 +10,14 @@ export async function connectMongo() {
   }
 
   try {
-    await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
+    await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 5000,
+      heartbeatFrequencyMS: 30000,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      keepAlive: true,
+      keepAliveInitialDelay: 30000,
+    });
     connected = true;
     console.log('[MONGO] Connected to MongoDB');
     return true;
@@ -28,6 +35,11 @@ export async function connectMongo() {
     return false;
   }
 }
+
+mongoose.connection.on('connected', () => {
+  connected = true;
+  console.log('[MONGO] Connected to MongoDB');
+});
 
 mongoose.connection.on('disconnected', () => {
   connected = false;

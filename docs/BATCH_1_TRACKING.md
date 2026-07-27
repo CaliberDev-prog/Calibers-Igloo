@@ -18,13 +18,13 @@
 | 6 | #8 | NoSQL injection prevention | **DONE** | #1 | mongo-sanitize middleware, 26 tests |
 | 7 | #7 | XSS sanitization | **DONE** | None | TreeWalker search fix, CSP meta, URL validation, 59 tests |
 | 8 | #9 | File upload / transcript security | **DONE** | #7 | 5MB size limit, nosniff, filename hardening, 35 tests |
-| 9 | #3 | Harden CORS | Pending | None | Already done — may close |
-| 10 | #4 | Harden security headers | Pending | None | Already done via helmet |
-| 11 | #5 | CSRF protection | Pending | #3 | Not implemented |
-| 12 | #2 | Rate limiting | Pending | None | Partially done |
-| 13 | #10 | Secure error responses | Pending | None | Partially done |
-| 14 | #11 | Security audit logging | Pending | None | Partially done |
-| 15 | #13 | Harden MongoDB connection | Pending | None | No TLS, no pool limits |
+| 9 | #3 | Harden CORS | **DONE** | None | Dynamic origin, credentials, narrow allowlist |
+| 10 | #4 | Harden security headers | **DONE** | None | CSP, HSTS, frameguard, noSniff, CORP via helmet |
+| 11 | #5 | CSRF protection | **DONE** | #3 | Origin check + Content-Type enforcement on state-changing requests |
+| 12 | #2 | Rate limiting | **DONE** | None | Login 15/15min, refresh 30/15min, API 500/15min |
+| 13 | #10 | Secure error responses | **DONE** | None | No stack traces, strip __v, static error messages |
+| 14 | #11 | Security audit logging | **DONE** | None | Failed/successful login, replay detection, IP capture |
+| 15 | #13 | Harden MongoDB connection | **DONE** | None | connected event fix, keepAlive, pool settings |
 
 ---
 

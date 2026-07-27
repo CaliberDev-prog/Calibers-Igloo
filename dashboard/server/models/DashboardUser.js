@@ -10,7 +10,7 @@ const schema = new mongoose.Schema({
     enum: ['owner', 'developer', 'manager', 'moderator', 'support', 'analyst'],
     default: 'support',
   },
-}, { timestamps: true, toJSON: { transform: (doc, ret) => { delete ret.passwordHash; return ret; } } });
+}, { timestamps: true, toJSON: { transform: (doc, ret) => { delete ret.passwordHash; delete ret.__v; return ret; } } });
 
 schema.methods.checkPassword = async function (plain) {
   return bcryptjs.compare(plain, this.passwordHash);
