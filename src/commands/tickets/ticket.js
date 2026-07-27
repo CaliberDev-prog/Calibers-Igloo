@@ -23,6 +23,14 @@ function inTicket(interaction) {
   );
 }
 
+function withTicketGuard(fn) {
+  return async (interaction) => {
+    if (!inTicket(interaction)) return interaction.reply({ content: '❌ Ticket channel only.', ephemeral: true });
+    if (!isStaff(interaction.member)) return interaction.reply({ content: '❌ Staff only.', ephemeral: true });
+    return fn(interaction);
+  };
+}
+
 async function getTicket(channelId) {
   return ticketService.getTicketByChannelId(channelId);
 }
@@ -147,25 +155,25 @@ export const commands = [
 
       switch (sub) {
         case 'close':
-          return cmdClose(interaction);
+          return withTicketGuard(cmdClose)(interaction);
         case 'transcript':
-          return cmdTranscript(interaction);
+          return withTicketGuard(cmdTranscript)(interaction);
         case 'move':
-          return cmdMove(interaction);
+          return withTicketGuard(cmdMove)(interaction);
         case 'add':
-          return cmdAdd(interaction);
+          return withTicketGuard(cmdAdd)(interaction);
         case 'remove':
-          return cmdRemove(interaction);
+          return withTicketGuard(cmdRemove)(interaction);
         case 'rename':
-          return cmdRename(interaction);
+          return withTicketGuard(cmdRename)(interaction);
         case 'request-close':
           return cmdRequestClose(interaction);
         case 'alert':
-          return cmdAlert(interaction);
+          return withTicketGuard(cmdAlert)(interaction);
         case 'ping':
-          return cmdPing(interaction);
+          return withTicketGuard(cmdPing)(interaction);
         case 'purge':
-          return cmdPurge(interaction);
+          return withTicketGuard(cmdPurge)(interaction);
         case 'blacklist':
           return cmdBlacklist(interaction);
         case 'unblacklist':
@@ -180,9 +188,6 @@ export const commands = [
 ];
 
 async function cmdClose(interaction) {
-  if (!inTicket(interaction)) return interaction.reply({ content: '❌ Ticket channel only.', ephemeral: true });
-  if (!isStaff(interaction.member)) return interaction.reply({ content: '❌ Staff only.', ephemeral: true });
-
   const reason = interaction.options.getString('reason') || 'No reason provided';
 
   await interaction.deferReply();
@@ -222,9 +227,6 @@ async function cmdClose(interaction) {
 }
 
 async function cmdTranscript(interaction) {
-  if (!inTicket(interaction)) return interaction.reply({ content: '❌ Ticket channel only.', ephemeral: true });
-  if (!isStaff(interaction.member)) return interaction.reply({ content: '❌ Staff only.', ephemeral: true });
-
   await interaction.deferReply({ ephemeral: true });
 
   try {
@@ -239,9 +241,6 @@ async function cmdTranscript(interaction) {
 }
 
 async function cmdMove(interaction) {
-  if (!inTicket(interaction)) return interaction.reply({ content: '❌ Ticket channel only.', ephemeral: true });
-  if (!isStaff(interaction.member)) return interaction.reply({ content: '❌ Staff only.', ephemeral: true });
-
   const dept = interaction.options.getString('department');
   await interaction.deferReply();
 
@@ -259,9 +258,6 @@ async function cmdMove(interaction) {
 }
 
 async function cmdAdd(interaction) {
-  if (!inTicket(interaction)) return interaction.reply({ content: '❌ Ticket channel only.', ephemeral: true });
-  if (!isStaff(interaction.member)) return interaction.reply({ content: '❌ Staff only.', ephemeral: true });
-
   const target = interaction.options.getMember('user');
   if (!target) return interaction.reply({ content: '❌ User not found.', ephemeral: true });
 
@@ -293,9 +289,6 @@ async function cmdAdd(interaction) {
 }
 
 async function cmdRemove(interaction) {
-  if (!inTicket(interaction)) return interaction.reply({ content: '❌ Ticket channel only.', ephemeral: true });
-  if (!isStaff(interaction.member)) return interaction.reply({ content: '❌ Staff only.', ephemeral: true });
-
   const target = interaction.options.getMember('user');
   if (!target) return interaction.reply({ content: '❌ User not found.', ephemeral: true });
 
@@ -310,9 +303,6 @@ async function cmdRemove(interaction) {
 }
 
 async function cmdRename(interaction) {
-  if (!inTicket(interaction)) return interaction.reply({ content: '❌ Ticket channel only.', ephemeral: true });
-  if (!isStaff(interaction.member)) return interaction.reply({ content: '❌ Staff only.', ephemeral: true });
-
   const name = interaction.options.getString('name');
 
   await interaction.deferReply({ ephemeral: true });
@@ -347,9 +337,6 @@ async function cmdRequestClose(interaction) {
 }
 
 async function cmdAlert(interaction) {
-  if (!inTicket(interaction)) return interaction.reply({ content: '❌ Ticket channel only.', ephemeral: true });
-  if (!isStaff(interaction.member)) return interaction.reply({ content: '❌ Staff only.', ephemeral: true });
-
   await interaction.deferReply({ ephemeral: true });
 
   try {
@@ -364,9 +351,6 @@ async function cmdAlert(interaction) {
 }
 
 async function cmdPing(interaction) {
-  if (!inTicket(interaction)) return interaction.reply({ content: '❌ Ticket channel only.', ephemeral: true });
-  if (!isStaff(interaction.member)) return interaction.reply({ content: '❌ Staff only.', ephemeral: true });
-
   await interaction.deferReply({ ephemeral: true });
 
   try {
@@ -378,9 +362,6 @@ async function cmdPing(interaction) {
 }
 
 async function cmdPurge(interaction) {
-  if (!inTicket(interaction)) return interaction.reply({ content: '❌ Ticket channel only.', ephemeral: true });
-  if (!isStaff(interaction.member)) return interaction.reply({ content: '❌ Staff only.', ephemeral: true });
-
   const count = interaction.options.getInteger('count');
 
   await interaction.deferReply({ ephemeral: true });

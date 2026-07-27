@@ -29,55 +29,73 @@ describe('Command permission validation — slash commands', () => {
   it('/ticket close requires isStaff', () => {
     const src = readSrc('src/commands/tickets/ticket.js');
     const closeFn = src.substring(src.indexOf('async function cmdClose'), src.indexOf('async function cmdTranscript'));
-    assert.ok(closeFn.includes('isStaff'), '/ticket close must check isStaff');
+    const hasDirectCheck = closeFn.includes('isStaff');
+    const hasGuardWrapper = src.includes('withTicketGuard(cmdClose)');
+    assert.ok(hasDirectCheck || hasGuardWrapper, '/ticket close must check isStaff (directly or via withTicketGuard)');
   });
 
   it('/ticket transcript requires isStaff', () => {
     const src = readSrc('src/commands/tickets/ticket.js');
     const fn = src.substring(src.indexOf('async function cmdTranscript'), src.indexOf('async function cmdMove'));
-    assert.ok(fn.includes('isStaff'), '/ticket transcript must check isStaff');
+    const hasDirectCheck = fn.includes('isStaff');
+    const hasGuardWrapper = src.includes('withTicketGuard(cmdTranscript)');
+    assert.ok(hasDirectCheck || hasGuardWrapper, '/ticket transcript must check isStaff (directly or via withTicketGuard)');
   });
 
   it('/ticket move requires isStaff', () => {
     const src = readSrc('src/commands/tickets/ticket.js');
     const fn = src.substring(src.indexOf('async function cmdMove'), src.indexOf('async function cmdAdd'));
-    assert.ok(fn.includes('isStaff'), '/ticket move must check isStaff');
+    const hasDirectCheck = fn.includes('isStaff');
+    const hasGuardWrapper = src.includes('withTicketGuard(cmdMove)');
+    assert.ok(hasDirectCheck || hasGuardWrapper, '/ticket move must check isStaff (directly or via withTicketGuard)');
   });
 
   it('/ticket add requires isStaff', () => {
     const src = readSrc('src/commands/tickets/ticket.js');
     const fn = src.substring(src.indexOf('async function cmdAdd'), src.indexOf('async function cmdRemove'));
-    assert.ok(fn.includes('isStaff'), '/ticket add must check isStaff');
+    const hasDirectCheck = fn.includes('isStaff');
+    const hasGuardWrapper = src.includes('withTicketGuard(cmdAdd)');
+    assert.ok(hasDirectCheck || hasGuardWrapper, '/ticket add must check isStaff (directly or via withTicketGuard)');
   });
 
   it('/ticket remove requires isStaff', () => {
     const src = readSrc('src/commands/tickets/ticket.js');
     const fn = src.substring(src.indexOf('async function cmdRemove'), src.indexOf('async function cmdRename'));
-    assert.ok(fn.includes('isStaff'), '/ticket remove must check isStaff');
+    const hasDirectCheck = fn.includes('isStaff');
+    const hasGuardWrapper = src.includes('withTicketGuard(cmdRemove)');
+    assert.ok(hasDirectCheck || hasGuardWrapper, '/ticket remove must check isStaff (directly or via withTicketGuard)');
   });
 
   it('/ticket rename requires isStaff', () => {
     const src = readSrc('src/commands/tickets/ticket.js');
     const fn = src.substring(src.indexOf('async function cmdRename'), src.indexOf('async function cmdRequestClose'));
-    assert.ok(fn.includes('isStaff'), '/ticket rename must check isStaff');
+    const hasDirectCheck = fn.includes('isStaff');
+    const hasGuardWrapper = src.includes('withTicketGuard(cmdRename)');
+    assert.ok(hasDirectCheck || hasGuardWrapper, '/ticket rename must check isStaff (directly or via withTicketGuard)');
   });
 
   it('/ticket alert requires isStaff', () => {
     const src = readSrc('src/commands/tickets/ticket.js');
     const fn = src.substring(src.indexOf('async function cmdAlert'), src.indexOf('async function cmdPing'));
-    assert.ok(fn.includes('isStaff'), '/ticket alert must check isStaff');
+    const hasDirectCheck = fn.includes('isStaff');
+    const hasGuardWrapper = src.includes('withTicketGuard(cmdAlert)');
+    assert.ok(hasDirectCheck || hasGuardWrapper, '/ticket alert must check isStaff (directly or via withTicketGuard)');
   });
 
   it('/ticket ping requires isStaff', () => {
     const src = readSrc('src/commands/tickets/ticket.js');
     const fn = src.substring(src.indexOf('async function cmdPing'), src.indexOf('async function cmdPurge'));
-    assert.ok(fn.includes('isStaff'), '/ticket ping must check isStaff');
+    const hasDirectCheck = fn.includes('isStaff');
+    const hasGuardWrapper = src.includes('withTicketGuard(cmdPing)');
+    assert.ok(hasDirectCheck || hasGuardWrapper, '/ticket ping must check isStaff (directly or via withTicketGuard)');
   });
 
   it('/ticket purge requires isStaff', () => {
     const src = readSrc('src/commands/tickets/ticket.js');
     const fn = src.substring(src.indexOf('async function cmdPurge'), src.indexOf('async function cmdBlacklist'));
-    assert.ok(fn.includes('isStaff'), '/ticket purge must check isStaff');
+    const hasDirectCheck = fn.includes('isStaff');
+    const hasGuardWrapper = src.includes('withTicketGuard(cmdPurge)');
+    assert.ok(hasDirectCheck || hasGuardWrapper, '/ticket purge must check isStaff (directly or via withTicketGuard)');
   });
 
   it('/ticket blacklist requires canManageTicket', () => {
@@ -99,7 +117,9 @@ describe('Command permission validation — slash commands', () => {
       const start = src.indexOf(`async function ${fn}`);
       assert.ok(start !== -1, `Function ${fn} not found`);
       const chunk = src.substring(start, start + 500);
-      assert.ok(chunk.includes('inTicket'), `${fn} must check inTicket`);
+      const hasDirectCheck = chunk.includes('inTicket');
+      const hasGuardWrapper = src.includes(`withTicketGuard(${fn})`);
+      assert.ok(hasDirectCheck || hasGuardWrapper, `${fn} must check inTicket (directly or via withTicketGuard)`);
     }
   });
 
