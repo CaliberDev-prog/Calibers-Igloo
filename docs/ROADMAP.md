@@ -6,7 +6,7 @@ Single source of truth for implementation, testing, review, and release readines
 
 ## Current Milestone
 
-Batch 1 complete; Batch 2 architecture issues created and ready for implementation.
+Batch 1 complete; Batch 2 complete; Batch 3 ready for implementation.
 
 ## Quality Baseline
 
@@ -47,8 +47,8 @@ Stop scope creep. New improvements discovered during implementation should be re
 | Batch | Primary Focus | Status | Release Gate |
 |-------|---------------|--------|-------------|
 | 1 | Security Criticals | Complete | All 15 issues complete; 323 tests passing across 8 files. |
-| 2 | Architecture | In Progress | All ten architecture issues complete and behavior preserved. |
-| 3 | Performance | Pending | Budgets met with measured evidence. |
+| 2 | Architecture | Complete | All ten architecture issues complete and behavior preserved. |
+| 3 | Performance | Ready | Baseline measurements to be established before optimization begins. |
 | 4 | Accessibility | Pending | WCAG 2.2 AA review completed. |
 | 5 | UX Polish | Pending | No unfinished, inconsistent, or confusing primary journeys. |
 | 6 | Testing | Pending | Required unit, integration, and E2E coverage complete. |
