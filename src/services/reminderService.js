@@ -53,16 +53,36 @@ export async function handleReminderMessage(message) {
   }
 }
 
+const RETRYABLE_CODES = new Set([10107, 13435, 13436, 11600, 11602]);
+
+async function withRetry(fn, maxRetries = 3, delay = 1000) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (i === maxRetries - 1) throw err;
+      if (err.code && RETRYABLE_CODES.has(err.code)) {
+        console.log(`[MONGO] Retryable error (${err.codeName}), attempt ${i + 2}/${maxRetries}...`);
+        await new Promise((r) => setTimeout(r, delay * (i + 1)));
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
 export async function createReminder({ userId, channelId, guildId, message, intervalMinutes, createdBy }) {
-  const reminder = await Reminder.create({
-    userId,
-    channelId,
-    guildId,
-    message: message || 'Time for your reminder!',
-    intervalMinutes: Math.max(1, Math.min(1440, intervalMinutes || 5)),
-    createdBy,
-    cycleStart: new Date(),
-  });
+  const reminder = await withRetry(() =>
+    Reminder.create({
+      userId,
+      channelId,
+      guildId,
+      message: message || 'Time for your reminder!',
+      intervalMinutes: Math.max(1, Math.min(1440, intervalMinutes || 5)),
+      createdBy,
+      cycleStart: new Date(),
+    })
+  );
   return reminder;
 }
 
