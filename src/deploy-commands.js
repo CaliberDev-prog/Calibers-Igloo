@@ -2,9 +2,11 @@ import 'dotenv/config';
 import { REST, Routes } from 'discord.js';
 import { data as setup } from './commands/setup.js';
 import { data as ping } from './commands/ping.js';
+import { data as clearbot } from './commands/clearbot.js';
 import { commands as ticketCommands } from './commands/tickets/ticket.js';
 import { commands as panelCommands } from './commands/slash/panels.js';
 import { commands as modCommands } from './commands/slash/moderation.js';
+import { commands as reminderCommands } from './commands/slash/reminder.js';
 import * as staffadd from './commands/staffadd.js';
 
 const required = ['DISCORD_TOKEN', 'CLIENT_ID', 'GUILD_ID'];
@@ -15,10 +17,12 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 const all = [
   setup.toJSON(),
   ping.toJSON(),
+  clearbot.toJSON(),
   staffadd.data.toJSON(),
   ...ticketCommands.map((c) => c.data.toJSON()),
   ...panelCommands.map((c) => c.data.toJSON()),
   ...modCommands.map((c) => c.data.toJSON()),
+  ...reminderCommands.map((c) => c.data.toJSON()),
 ];
 
 await rest.put(Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID), {
