@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import {
   createReminder,
   deleteReminder,
@@ -57,10 +57,10 @@ export const commands = [
         const message = interaction.options.getString('message') || 'Time for your reminder!';
 
         if (channel.type !== 0) {
-          return interaction.reply({ content: 'Channel must be a text channel.', ephemeral: true });
+          return interaction.reply({ content: 'Channel must be a text channel.', flags: MessageFlags.Ephemeral });
         }
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const reminder = await createReminder({
           userId: user.id,
@@ -78,7 +78,7 @@ export const commands = [
 
       if (sub === 'delete') {
         const id = interaction.options.getString('id', true);
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const deleted = await deleteReminder(id);
         if (!deleted) {
@@ -89,7 +89,7 @@ export const commands = [
       }
 
       if (sub === 'list') {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const reminders = await listReminders(interaction.guildId);
         if (reminders.length === 0) {
@@ -112,14 +112,14 @@ export const commands = [
           content: `**Reminders (${reminders.length})**\n${chunks[0]}`,
         });
         for (let i = 1; i < chunks.length; i++) {
-          await interaction.followUp({ content: chunks[i], ephemeral: true });
+          await interaction.followUp({ content: chunks[i], flags: MessageFlags.Ephemeral });
         }
         return;
       }
 
       if (sub === 'pause') {
         const id = interaction.options.getString('id', true);
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const reminder = await pauseReminder(id);
         if (!reminder) {
@@ -131,7 +131,7 @@ export const commands = [
 
       if (sub === 'resume') {
         const id = interaction.options.getString('id', true);
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const reminder = await resumeReminder(id);
         if (!reminder) {
