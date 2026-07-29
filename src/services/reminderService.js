@@ -7,7 +7,8 @@ const DATA_DIR = join(__dirname, '..', 'data');
 const FILE_PATH = join(DATA_DIR, 'reminders.json');
 
 const RESPONSE_WINDOW_MS = 30 * 1000;
-const CHECK_INTERVAL_MS = 8 * 1000;
+const SPAM_INTERVAL_MS = 3 * 1000;
+const CHECK_INTERVAL_MS = 2 * 1000;
 
 function load() {
   try {
@@ -45,13 +46,20 @@ export async function initReminderService(client) {
         const lastPing = reminder.lastPingedAt ? new Date(reminder.lastPingedAt).getTime() : null;
         const lastResponse = reminder.lastResponseAt ? new Date(reminder.lastResponseAt).getTime() : null;
         const sinceLastPing = lastPing ? now - lastPing : Infinity;
-        const sinceLastResponse = lastResponse ? now - lastResponse : Infinity;
+        const isCaughtUp = !lastPing || (lastResponse && lastResponse >= lastPing);
 
-        const needsPing = !lastPing || lastResponse >= lastPing
-          ? now - new Date(reminder.cycleStart).getTime() >= reminder.intervalMinutes * 60 * 1000
-          : sinceLastPing >= RESPONSE_WINDOW_MS;
-
-        if (!needsPing) continue;
+        if (isCaughtUp) {
+          reminder.spamActive = false;
+          const sinceCycleStart = now - new Date(reminder.cycleStart).getTime();
+          if (sinceCycleStart < reminder.intervalMinutes * 60 * 1000) continue;
+        } else {
+          if (!reminder.spamActive) {
+            if (sinceLastPing < RESPONSE_WINDOW_MS) continue;
+            reminder.spamActive = true;
+          } else if (sinceLastPing < SPAM_INTERVAL_MS) {
+            continue;
+          }
+        }
 
         const channel = guild.channels.cache.get(reminder.channelId);
         if (!channel) continue;
@@ -59,7 +67,6 @@ export async function initReminderService(client) {
         const user = guild.members.cache.get(reminder.userId) || await guild.members.fetch(reminder.userId).catch(() => null);
         if (!user) continue;
 
-        const isSpam = lastPing && lastResponse < lastPing;
         const msg = await channel.send(`<@${reminder.userId}> ${reminder.message}`).catch(() => null);
         if (msg) {
           reminder.lastPingedAt = new Date().toISOString();
@@ -90,6 +97,7 @@ export async function handleReminderMessage(message) {
       if (r.channelId === message.channel.id && r.userId === message.author.id) {
         r.lastResponseAt = new Date().toISOString();
         r.cycleStart = new Date().toISOString();
+        r.spamActive = false;
         r.totalResponses = (r.totalResponses || 0) + 1;
         changed = true;
       }
