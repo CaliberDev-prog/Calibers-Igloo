@@ -22,7 +22,7 @@ export const commands = [
           .addIntegerOption((o) =>
             o.setName('interval').setDescription('Minutes between pings (min: 1, max: 1440)').setMinValue(1).setMaxValue(1440).setRequired(true),
           )
-          .addStringOption((o) => o.setName('message').setDescription('Custom reminder message (default: "Time for your reminder!")')),
+          .addStringOption((o) => o.setName('message').setDescription('Reminder message (default: "Wake up!")')),
       )
       .addSubcommand((sub) =>
         sub
@@ -54,7 +54,7 @@ export const commands = [
         const user = interaction.options.getUser('user', true);
         const channel = interaction.options.getChannel('channel', true);
         const interval = interaction.options.getInteger('interval', true);
-        const message = interaction.options.getString('message') || 'Time for your reminder!';
+        const message = interaction.options.getString('message') || 'Wake up!';
 
         if (channel.type !== 0) {
           return interaction.reply({ content: 'Channel must be a text channel.', flags: MessageFlags.Ephemeral });

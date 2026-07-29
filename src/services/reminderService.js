@@ -6,6 +6,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, '..', 'data');
 const FILE_PATH = join(DATA_DIR, 'reminders.json');
 
+const RESPONSE_WINDOW_MS = 30 * 1000;
+const CHECK_INTERVAL_MS = 8 * 1000;
+
 function load() {
   try {
     if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
@@ -38,9 +41,17 @@ export async function initReminderService(client) {
 
       for (const reminder of reminders) {
         if (!reminder.active) continue;
-        const elapsed = now - new Date(reminder.cycleStart).getTime();
-        const threshold = reminder.intervalMinutes * 60 * 1000;
-        if (elapsed < threshold) continue;
+
+        const lastPing = reminder.lastPingedAt ? new Date(reminder.lastPingedAt).getTime() : null;
+        const lastResponse = reminder.lastResponseAt ? new Date(reminder.lastResponseAt).getTime() : null;
+        const sinceLastPing = lastPing ? now - lastPing : Infinity;
+        const sinceLastResponse = lastResponse ? now - lastResponse : Infinity;
+
+        const needsPing = !lastPing || lastResponse >= lastPing
+          ? now - new Date(reminder.cycleStart).getTime() >= reminder.intervalMinutes * 60 * 1000
+          : sinceLastPing >= RESPONSE_WINDOW_MS;
+
+        if (!needsPing) continue;
 
         const channel = guild.channels.cache.get(reminder.channelId);
         if (!channel) continue;
@@ -48,10 +59,10 @@ export async function initReminderService(client) {
         const user = guild.members.cache.get(reminder.userId) || await guild.members.fetch(reminder.userId).catch(() => null);
         if (!user) continue;
 
+        const isSpam = lastPing && lastResponse < lastPing;
         const msg = await channel.send(`<@${reminder.userId}> ${reminder.message}`).catch(() => null);
         if (msg) {
           reminder.lastPingedAt = new Date().toISOString();
-          reminder.cycleStart = new Date().toISOString();
           reminder.totalPingsSent = (reminder.totalPingsSent || 0) + 1;
           changed = true;
         }
@@ -63,9 +74,8 @@ export async function initReminderService(client) {
     }
   };
 
-  const interval = setInterval(check, 60 * 1000);
-  check();
-
+  check().catch(() => null);
+  const interval = setInterval(check, CHECK_INTERVAL_MS);
   return interval;
 }
 
@@ -78,8 +88,8 @@ export async function handleReminderMessage(message) {
     for (const r of reminders) {
       if (!r.active) continue;
       if (r.channelId === message.channel.id && r.userId === message.author.id) {
-        r.cycleStart = new Date().toISOString();
         r.lastResponseAt = new Date().toISOString();
+        r.cycleStart = new Date().toISOString();
         r.totalResponses = (r.totalResponses || 0) + 1;
         changed = true;
       }
@@ -87,6 +97,8 @@ export async function handleReminderMessage(message) {
 
     if (changed) {
       save(reminders);
+      const channel = message.channel;
+      await channel.send(`✅ <@${message.author.id}> responded to the reminder!`).catch(() => null);
       console.log(`[REMINDER] Response detected: ${message.author.tag} in #${message.channel.name}`);
     }
   } catch (err) {
@@ -101,7 +113,7 @@ export async function createReminder({ userId, channelId, guildId, message, inte
     userId,
     channelId,
     guildId,
-    message: message || 'Time for your reminder!',
+    message: message || 'Wake up!',
     intervalMinutes: Math.max(1, Math.min(1440, intervalMinutes || 5)),
     active: true,
     createdBy,
