@@ -1,32 +1,27 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './lib/auth.jsx';
 import { ToastProvider } from './components/Toast.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import Layout from './components/Layout.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
-import TicketsPage from './pages/TicketsPage.jsx';
-import TicketDetailPage from './pages/TicketDetailPage.jsx';
-import AnalyticsPage from './pages/AnalyticsPage.jsx';
-import BlacklistsPage from './pages/BlacklistsPage.jsx';
-import SettingsPage from './pages/SettingsPage.jsx';
-import HealthPage from './pages/HealthPage.jsx';
-import MessagesPage from './pages/MessagesPage.jsx';
-import ServerPage from './pages/ServerPage.jsx';
-import TerminalPage from './pages/TerminalPage.jsx';
-import AuditLogsPage from './pages/AuditLogsPage.jsx';
-import UsersPage from './pages/UsersPage.jsx';
-import TranscriptsPage from './pages/TranscriptsPage.jsx';
-import VerificationPage from './pages/VerificationPage.jsx';
-import GiveawaysPage from './pages/GiveawaysPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 
-function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
-  if (loading) return <LoadingScreen />;
-  if (!user) return <Navigate to="/login" />;
-  return children;
-}
+const TicketsPage = lazy(() => import('./pages/TicketsPage.jsx'));
+const TicketDetailPage = lazy(() => import('./pages/TicketDetailPage.jsx'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage.jsx'));
+const BlacklistsPage = lazy(() => import('./pages/BlacklistsPage.jsx'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
+const HealthPage = lazy(() => import('./pages/HealthPage.jsx'));
+const MessagesPage = lazy(() => import('./pages/MessagesPage.jsx'));
+const ServerPage = lazy(() => import('./pages/ServerPage.jsx'));
+const TerminalPage = lazy(() => import('./pages/TerminalPage.jsx'));
+const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage.jsx'));
+const UsersPage = lazy(() => import('./pages/UsersPage.jsx'));
+const TranscriptsPage = lazy(() => import('./pages/TranscriptsPage.jsx'));
+const VerificationPage = lazy(() => import('./pages/VerificationPage.jsx'));
+const GiveawaysPage = lazy(() => import('./pages/GiveawaysPage.jsx'));
 
 function LoadingScreen() {
   return (
@@ -39,6 +34,13 @@ function LoadingScreen() {
   );
 }
 
+function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/login" />;
+  return <Suspense fallback={<LoadingScreen />}>{children}</Suspense>;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -46,7 +48,7 @@ export default function App() {
       <ToastProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/login" element={<Suspense fallback={<LoadingScreen />}><LoginPage /></Suspense>} />
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/dashboard" />} />
               <Route path="dashboard" element={<DashboardPage />} />

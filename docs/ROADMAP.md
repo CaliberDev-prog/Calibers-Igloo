@@ -6,7 +6,7 @@ Single source of truth for implementation, testing, review, and release readines
 
 ## Current Milestone
 
-Batch 1 complete; Batch 2 complete; Batch 3 Issue 1 and Issue 2 complete. Issue 3 ready after baseline review.
+Batch 1 complete; Batch 2 complete; Batch 3 Issue 1-3 complete. Issue 4 ready after review.
 
 ## Quality Baseline
 
@@ -48,7 +48,7 @@ Stop scope creep. New improvements discovered during implementation should be re
 |-------|---------------|--------|-------------|
 | 1 | Security Criticals | Complete | All 15 issues complete; 323 tests passing across 8 files. |
 | 2 | Architecture | Complete | All ten architecture issues complete and behavior preserved. |
-| 3 | Performance | Issue 2 Complete | Performance instrumentation deployed. Controlled baseline captured (see reports/). Optimization (Issue 3+) ready after baseline review. |
+| 3 | Performance | Issue 3 Complete | Instrumentation, baseline, and frontend bundle optimization complete. Next performance work (e.g., backend profiling, heavy-command budgets) deferred to future batch. |
 | 4 | Accessibility | Pending | WCAG 2.2 AA review completed. |
 | 5 | UX Polish | Pending | No unfinished, inconsistent, or confusing primary journeys. |
 | 6 | Testing | Pending | Required unit, integration, and E2E coverage complete. |
