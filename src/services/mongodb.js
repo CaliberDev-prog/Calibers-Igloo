@@ -1,4 +1,8 @@
 import mongoose from 'mongoose';
+import { installMongoPerf } from '../utils/mongoPerf.js';
+import { perf } from '../utils/performance.js';
+
+installMongoPerf();
 
 let connected = false;
 
@@ -9,6 +13,7 @@ export async function connectMongo() {
     return false;
   }
 
+  const endTimer = perf.startTimer('startup', 'mongodb-connect');
   try {
     await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 5000,
@@ -19,9 +24,11 @@ export async function connectMongo() {
       w: 'majority',
     });
     connected = true;
+    endTimer({ success: true });
     console.log('[MONGO] Connected to MongoDB');
     return true;
   } catch (err) {
+    endTimer({ success: false, error: err.message });
     console.error('[MONGO] Connection failed:', err.message);
     connected = false;
 

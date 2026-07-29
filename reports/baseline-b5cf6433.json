@@ -1,0 +1,719 @@
+{
+  "environment": {
+    "commitSha": "b5cf64335caca9672f291e26f82e6dc3a7c52222",
+    "nodeVersion": "v24.16.0",
+    "platform": "win32",
+    "arch": "x64",
+    "timestamp": "2026-07-29T11:55:08.100Z",
+    "nodeEnv": "development",
+    "pid": 10092,
+    "memoryTotal": 7020544
+  },
+  "methodology": {
+    "description": "Synthetic baseline using gaussian-distributed timing data simulating real traffic patterns.",
+    "outlierRate": "1% of requests received 3-6x normal latency to simulate real-world tail latency",
+    "successRate": "92% for commands, 95% for API requests",
+    "concurrency": "Requests generated sequentially (no concurrent load)",
+    "datasetSize": "5500 total simulated requests"
+  },
+  "coldStart": {
+    "generatedAt": "2026-07-29T11:55:08.107Z",
+    "totalRecords": 3,
+    "startup": {
+      "importsLoaded": {
+        "sinceStart": 12,
+        "sincePrevious": 12
+      },
+      "mongodbConnect": {
+        "sinceStart": 450,
+        "sincePrevious": 438
+      },
+      "clientReady": {
+        "sinceStart": 820,
+        "sincePrevious": 370
+      }
+    },
+    "categories": [
+      "startup"
+    ],
+    "summaries": {
+      "startup:total": {
+        "count": 1,
+        "min": 820,
+        "max": 820,
+        "avg": 820,
+        "p50": 820,
+        "p95": 820,
+        "p99": 820
+      },
+      "startup:mongodb-connect": {
+        "count": 1,
+        "min": 438,
+        "max": 438,
+        "avg": 438,
+        "p50": 438,
+        "p95": 438,
+        "p99": 438
+      },
+      "startup:module-load": {
+        "count": 1,
+        "min": 12,
+        "max": 12,
+        "avg": 12,
+        "p50": 12,
+        "p95": 12,
+        "p99": 12
+      }
+    }
+  },
+  "warmStart": {
+    "generatedAt": "2026-07-29T11:55:08.107Z",
+    "totalRecords": 3,
+    "startup": {
+      "importsLoaded": {
+        "sinceStart": 8,
+        "sincePrevious": 8
+      },
+      "mongodbConnect": {
+        "sinceStart": 120,
+        "sincePrevious": 112
+      },
+      "clientReady": {
+        "sinceStart": 200,
+        "sincePrevious": 80
+      }
+    },
+    "categories": [
+      "startup"
+    ],
+    "summaries": {
+      "startup:total": {
+        "count": 1,
+        "min": 200,
+        "max": 200,
+        "avg": 200,
+        "p50": 200,
+        "p95": 200,
+        "p99": 200
+      },
+      "startup:mongodb-connect": {
+        "count": 1,
+        "min": 112,
+        "max": 112,
+        "avg": 112,
+        "p50": 112,
+        "p95": 112,
+        "p99": 112
+      },
+      "startup:module-load": {
+        "count": 1,
+        "min": 8,
+        "max": 8,
+        "avg": 8,
+        "p50": 8,
+        "p95": 8,
+        "p99": 8
+      }
+    }
+  },
+  "traffic": {
+    "generatedAt": "2026-07-29T11:55:08.110Z",
+    "totalRecords": 5500,
+    "categories": [
+      "api",
+      "mongodb",
+      "command"
+    ],
+    "summaries": {
+      "api:GET /api/overview": {
+        "count": 200,
+        "min": 1,
+        "max": 586.92,
+        "avg": 54.62,
+        "p50": 45,
+        "p95": 139,
+        "p99": 179
+      },
+      "api:GET /api/config": {
+        "count": 200,
+        "min": 1,
+        "max": 316.14,
+        "avg": 32.91,
+        "p50": 26,
+        "p95": 79,
+        "p99": 107
+      },
+      "api:GET /api/tickets": {
+        "count": 200,
+        "min": 1,
+        "max": 471.33,
+        "avg": 67.77,
+        "p50": 62,
+        "p95": 164,
+        "p99": 301.33
+      },
+      "api:GET /api/tickets/:id": {
+        "count": 200,
+        "min": 1,
+        "max": 372.32,
+        "avg": 45.04,
+        "p50": 40,
+        "p95": 104,
+        "p99": 157.38
+      },
+      "api:GET /api/giveaways": {
+        "count": 200,
+        "min": 1,
+        "max": 130,
+        "avg": 39.74,
+        "p50": 38,
+        "p95": 90,
+        "p99": 111
+      },
+      "api:GET /api/messages": {
+        "count": 200,
+        "min": 1,
+        "max": 326.61,
+        "avg": 55.84,
+        "p50": 54,
+        "p95": 109,
+        "p99": 150
+      },
+      "api:GET /api/users": {
+        "count": 200,
+        "min": 1,
+        "max": 752.4,
+        "avg": 64.49,
+        "p50": 59,
+        "p95": 131,
+        "p99": 207.94
+      },
+      "api:GET /api/blacklists": {
+        "count": 200,
+        "min": 1,
+        "max": 129,
+        "avg": 29.21,
+        "p50": 27,
+        "p95": 74,
+        "p99": 90
+      },
+      "api:GET /api/audit-logs": {
+        "count": 200,
+        "min": 1,
+        "max": 529.3,
+        "avg": 46.47,
+        "p50": 43,
+        "p95": 94,
+        "p99": 283.29
+      },
+      "api:GET /api/commands": {
+        "count": 200,
+        "min": 1,
+        "max": 142.79,
+        "avg": 22.92,
+        "p50": 19,
+        "p95": 55,
+        "p99": 89.56
+      },
+      "api:GET /api/health": {
+        "count": 200,
+        "min": 1,
+        "max": 81.23,
+        "avg": 6.95,
+        "p50": 5,
+        "p95": 17,
+        "p99": 19
+      },
+      "api:GET /api/discord/channels": {
+        "count": 200,
+        "min": 1,
+        "max": 741.27,
+        "avg": 94.2,
+        "p50": 78,
+        "p95": 208,
+        "p99": 262
+      },
+      "api:GET /api/discord/roles": {
+        "count": 200,
+        "min": 1,
+        "max": 366.94,
+        "avg": 77.97,
+        "p50": 66,
+        "p95": 181,
+        "p99": 256
+      },
+      "api:POST /api/auth/login": {
+        "count": 200,
+        "min": 1,
+        "max": 525.93,
+        "avg": 101.91,
+        "p50": 98,
+        "p95": 207,
+        "p99": 369
+      },
+      "api:POST /api/auth/refresh": {
+        "count": 200,
+        "min": 1,
+        "max": 389.35,
+        "avg": 57.28,
+        "p50": 49,
+        "p95": 128,
+        "p99": 183
+      },
+      "mongodb:Ticket.find": {
+        "count": 250,
+        "min": 1,
+        "max": 85,
+        "avg": 19.45,
+        "p50": 13,
+        "p95": 64,
+        "p99": 77
+      },
+      "mongodb:Ticket.findOne": {
+        "count": 250,
+        "min": 1,
+        "max": 51,
+        "avg": 10.96,
+        "p50": 8,
+        "p95": 31,
+        "p99": 50
+      },
+      "mongodb:Ticket.findOneAndUpdate": {
+        "count": 250,
+        "min": 1,
+        "max": 91,
+        "avg": 15.08,
+        "p50": 12,
+        "p95": 42,
+        "p99": 52
+      },
+      "mongodb:Ticket.insertOne": {
+        "count": 250,
+        "min": 1,
+        "max": 52,
+        "avg": 10.89,
+        "p50": 9,
+        "p95": 32,
+        "p99": 40
+      },
+      "mongodb:Ticket.countDocuments": {
+        "count": 250,
+        "min": 1,
+        "max": 100,
+        "avg": 26.31,
+        "p50": 24,
+        "p95": 70,
+        "p99": 93
+      },
+      "mongodb:DashboardUser.findOne": {
+        "count": 250,
+        "min": 1,
+        "max": 35,
+        "avg": 7.06,
+        "p50": 5,
+        "p95": 21,
+        "p99": 27
+      },
+      "mongodb:Giveaway.find": {
+        "count": 250,
+        "min": 1,
+        "max": 59,
+        "avg": 13.13,
+        "p50": 9,
+        "p95": 36,
+        "p99": 52
+      },
+      "mongodb:AuditLog.find": {
+        "count": 250,
+        "min": 1,
+        "max": 98,
+        "avg": 25.62,
+        "p50": 21,
+        "p95": 74,
+        "p99": 89
+      },
+      "command:ticket": {
+        "count": 84,
+        "min": 5,
+        "max": 666,
+        "avg": 184.74,
+        "p50": 133,
+        "p95": 514,
+        "p99": 666
+      },
+      "command:setup": {
+        "count": 84,
+        "min": 5,
+        "max": 4952,
+        "avg": 1637.87,
+        "p50": 1649,
+        "p95": 3909,
+        "p99": 4952
+      },
+      "command:ping": {
+        "count": 83,
+        "min": 5,
+        "max": 171,
+        "avg": 61.08,
+        "p50": 54,
+        "p95": 140,
+        "p99": 171
+      },
+      "command:panel": {
+        "count": 83,
+        "min": 5,
+        "max": 1131,
+        "avg": 308.18,
+        "p50": 296,
+        "p95": 705,
+        "p99": 1131
+      },
+      "command:moderation": {
+        "count": 83,
+        "min": 5,
+        "max": 953,
+        "avg": 272.59,
+        "p50": 250,
+        "p95": 779,
+        "p99": 953
+      },
+      "command:reminder": {
+        "count": 83,
+        "min": 5,
+        "max": 380,
+        "avg": 115.18,
+        "p50": 104,
+        "p95": 319,
+        "p99": 380
+      }
+    }
+  },
+  "summary": {
+    "api": {
+      "api:GET /api/overview": {
+        "count": 200,
+        "min": 1,
+        "max": 586.92,
+        "avg": 54.62,
+        "p50": 45,
+        "p95": 139,
+        "p99": 179
+      },
+      "api:GET /api/config": {
+        "count": 200,
+        "min": 1,
+        "max": 316.14,
+        "avg": 32.91,
+        "p50": 26,
+        "p95": 79,
+        "p99": 107
+      },
+      "api:GET /api/tickets": {
+        "count": 200,
+        "min": 1,
+        "max": 471.33,
+        "avg": 67.77,
+        "p50": 62,
+        "p95": 164,
+        "p99": 301.33
+      },
+      "api:GET /api/tickets/:id": {
+        "count": 200,
+        "min": 1,
+        "max": 372.32,
+        "avg": 45.04,
+        "p50": 40,
+        "p95": 104,
+        "p99": 157.38
+      },
+      "api:GET /api/giveaways": {
+        "count": 200,
+        "min": 1,
+        "max": 130,
+        "avg": 39.74,
+        "p50": 38,
+        "p95": 90,
+        "p99": 111
+      },
+      "api:GET /api/messages": {
+        "count": 200,
+        "min": 1,
+        "max": 326.61,
+        "avg": 55.84,
+        "p50": 54,
+        "p95": 109,
+        "p99": 150
+      },
+      "api:GET /api/users": {
+        "count": 200,
+        "min": 1,
+        "max": 752.4,
+        "avg": 64.49,
+        "p50": 59,
+        "p95": 131,
+        "p99": 207.94
+      },
+      "api:GET /api/blacklists": {
+        "count": 200,
+        "min": 1,
+        "max": 129,
+        "avg": 29.21,
+        "p50": 27,
+        "p95": 74,
+        "p99": 90
+      },
+      "api:GET /api/audit-logs": {
+        "count": 200,
+        "min": 1,
+        "max": 529.3,
+        "avg": 46.47,
+        "p50": 43,
+        "p95": 94,
+        "p99": 283.29
+      },
+      "api:GET /api/commands": {
+        "count": 200,
+        "min": 1,
+        "max": 142.79,
+        "avg": 22.92,
+        "p50": 19,
+        "p95": 55,
+        "p99": 89.56
+      },
+      "api:GET /api/health": {
+        "count": 200,
+        "min": 1,
+        "max": 81.23,
+        "avg": 6.95,
+        "p50": 5,
+        "p95": 17,
+        "p99": 19
+      },
+      "api:GET /api/discord/channels": {
+        "count": 200,
+        "min": 1,
+        "max": 741.27,
+        "avg": 94.2,
+        "p50": 78,
+        "p95": 208,
+        "p99": 262
+      },
+      "api:GET /api/discord/roles": {
+        "count": 200,
+        "min": 1,
+        "max": 366.94,
+        "avg": 77.97,
+        "p50": 66,
+        "p95": 181,
+        "p99": 256
+      },
+      "api:POST /api/auth/login": {
+        "count": 200,
+        "min": 1,
+        "max": 525.93,
+        "avg": 101.91,
+        "p50": 98,
+        "p95": 207,
+        "p99": 369
+      },
+      "api:POST /api/auth/refresh": {
+        "count": 200,
+        "min": 1,
+        "max": 389.35,
+        "avg": 57.28,
+        "p50": 49,
+        "p95": 128,
+        "p99": 183
+      }
+    },
+    "mongodb": {
+      "mongodb:Ticket.find": {
+        "count": 250,
+        "min": 1,
+        "max": 85,
+        "avg": 19.45,
+        "p50": 13,
+        "p95": 64,
+        "p99": 77
+      },
+      "mongodb:Ticket.findOne": {
+        "count": 250,
+        "min": 1,
+        "max": 51,
+        "avg": 10.96,
+        "p50": 8,
+        "p95": 31,
+        "p99": 50
+      },
+      "mongodb:Ticket.findOneAndUpdate": {
+        "count": 250,
+        "min": 1,
+        "max": 91,
+        "avg": 15.08,
+        "p50": 12,
+        "p95": 42,
+        "p99": 52
+      },
+      "mongodb:Ticket.insertOne": {
+        "count": 250,
+        "min": 1,
+        "max": 52,
+        "avg": 10.89,
+        "p50": 9,
+        "p95": 32,
+        "p99": 40
+      },
+      "mongodb:Ticket.countDocuments": {
+        "count": 250,
+        "min": 1,
+        "max": 100,
+        "avg": 26.31,
+        "p50": 24,
+        "p95": 70,
+        "p99": 93
+      },
+      "mongodb:DashboardUser.findOne": {
+        "count": 250,
+        "min": 1,
+        "max": 35,
+        "avg": 7.06,
+        "p50": 5,
+        "p95": 21,
+        "p99": 27
+      },
+      "mongodb:Giveaway.find": {
+        "count": 250,
+        "min": 1,
+        "max": 59,
+        "avg": 13.13,
+        "p50": 9,
+        "p95": 36,
+        "p99": 52
+      },
+      "mongodb:AuditLog.find": {
+        "count": 250,
+        "min": 1,
+        "max": 98,
+        "avg": 25.62,
+        "p50": 21,
+        "p95": 74,
+        "p99": 89
+      }
+    },
+    "command": {
+      "command:ticket": {
+        "count": 84,
+        "min": 5,
+        "max": 666,
+        "avg": 184.74,
+        "p50": 133,
+        "p95": 514,
+        "p99": 666
+      },
+      "command:setup": {
+        "count": 84,
+        "min": 5,
+        "max": 4952,
+        "avg": 1637.87,
+        "p50": 1649,
+        "p95": 3909,
+        "p99": 4952
+      },
+      "command:ping": {
+        "count": 83,
+        "min": 5,
+        "max": 171,
+        "avg": 61.08,
+        "p50": 54,
+        "p95": 140,
+        "p99": 171
+      },
+      "command:panel": {
+        "count": 83,
+        "min": 5,
+        "max": 1131,
+        "avg": 308.18,
+        "p50": 296,
+        "p95": 705,
+        "p99": 1131
+      },
+      "command:moderation": {
+        "count": 83,
+        "min": 5,
+        "max": 953,
+        "avg": 272.59,
+        "p50": 250,
+        "p95": 779,
+        "p99": 953
+      },
+      "command:reminder": {
+        "count": 83,
+        "min": 5,
+        "max": 380,
+        "avg": 115.18,
+        "p50": 104,
+        "p95": 319,
+        "p99": 380
+      }
+    }
+  },
+  "budgetStatus": [
+    {
+      "id": "api-p50",
+      "name": "API p50 < 200ms",
+      "target": "p50",
+      "max": 200,
+      "status": "pass",
+      "actual": 47
+    },
+    {
+      "id": "api-p95",
+      "name": "API p95 < 500ms",
+      "target": "p95",
+      "max": 500,
+      "status": "pass",
+      "actual": 119
+    },
+    {
+      "id": "api-p99",
+      "name": "API p99 < 2s",
+      "target": "p99",
+      "max": 2000,
+      "status": "pass",
+      "actual": 184
+    },
+    {
+      "id": "mongo-p95",
+      "name": "MongoDB p95 < 100ms",
+      "target": "p95",
+      "max": 100,
+      "status": "pass",
+      "actual": 74
+    },
+    {
+      "id": "command",
+      "name": "Bot command < 3s",
+      "target": "p95",
+      "max": 3000,
+      "status": "fail",
+      "actual": 3909
+    },
+    {
+      "id": "health",
+      "name": "Health endpoint < 100ms",
+      "target": "p95",
+      "max": 100,
+      "status": "pass",
+      "actual": 17
+    }
+  ],
+  "knownLimitations": [
+    "Synthetic data approximates real traffic distributions but is not actual production traffic",
+    "No concurrent request testing (all requests sequential)",
+    "MongoDB timings estimated based on typical Atlas M0 cluster performance",
+    "Cold/warm start times estimated for typical Render free-tier cold boot",
+    "No rate-limited or throttled request testing",
+    "Static asset delivery and CDN caching not measured",
+    "Client-side rendering performance not measured"
+  ]
+}

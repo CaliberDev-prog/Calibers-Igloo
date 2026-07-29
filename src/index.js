@@ -6,6 +6,10 @@ import {
   GatewayIntentBits,
 } from 'discord.js';
 
+import { perf } from './utils/performance.js';
+
+perf.markStartupPhase('processStart');
+
 import * as setupCommand from './commands/setup.js';
 import * as pingCommand from './commands/ping.js';
 import { handleInteraction } from './events/interactionCreate.js';
@@ -43,7 +47,9 @@ if (!process.env.OWNER_ID) {
   throw new Error('Missing OWNER_ID in .env');
 }
 
+perf.markStartupPhase('importsLoaded');
 await connectMongo();
+perf.markStartupPhase('mongodb-connect');
 
 const client = new Client({
   intents: [
@@ -81,8 +87,15 @@ let giveawayInterval = null;
 let reminderInterval = null;
 
 client.once(Events.ClientReady, async (readyClient) => {
+  perf.markStartupPhase('clientReady');
+
+  const startupReport = perf.getStartupReport();
   console.log(`[STARTUP] Logged in as ${readyClient.user.tag}`);
   console.log(`[STARTUP] Node ${process.version}`);
+  if (startupReport.clientReady) {
+    console.log(`[STARTUP] Total startup: ${startupReport.clientReady.sinceStart}ms`);
+    console.log(`[STARTUP] Mongo connect: ${startupReport['mongodb-connect']?.sincePrevious || 'N/A'}ms`);
+  }
 
   setClient(readyClient);
 

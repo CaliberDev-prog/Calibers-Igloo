@@ -10,11 +10,16 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
 
+import { perf } from './utils/performance.js';
+import { perfMiddleware } from './middleware/perfMiddleware.js';
+import { authenticate, requireOwner } from './middleware/auth.js';
 import authRoutes from './routes/auth.js';
 import apiRoutes from './routes/api.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+perf.markStartupPhase('processStart');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -79,6 +84,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
+app.use(perfMiddleware);
 
 app.use((req, res, next) => {
   if (req.body) req.body = sanitize(req.body);
@@ -113,14 +119,21 @@ const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 500 });
 app.use('/api/', apiLimiter);
 
 let dbConnected = false;
+perf.markStartupPhase('beforeMongo');
+const mongoEnd = perf.startTimer('startup', 'mongodb-connect');
 try {
   await mongoose.connect(process.env.MONGODB_URI, {
     serverSelectionTimeoutMS: 5000,
-    directConnection: true,
+    retryWrites: true,
+    w: 'majority',
   });
   dbConnected = true;
+  mongoEnd({ success: true });
+  perf.markStartupPhase('mongodb-connect');
   console.log('[DB] MongoDB connected');
 } catch (err) {
+  mongoEnd({ success: false, error: err.message });
+  perf.markStartupPhase('mongodb-connect');
   console.error('[DB] MongoDB connection failed:', err.message);
   if (IS_PROD) {
     console.error('[DB] Cannot start in production without database. Exiting.');
@@ -171,8 +184,28 @@ if (distExists) {
   });
 }
 
+app.get('/api/performance/metrics', authenticate, requireOwner, (req, res) => {
+  const report = perf.generateBaselineReport();
+  res.json({ success: true, data: report });
+});
+
+app.get('/api/performance/summary', authenticate, requireOwner, (req, res) => {
+  const { category, label } = req.query;
+  const summary = perf.getSummary(category || null, label || null);
+  if (!summary) {
+    return res.json({ success: true, data: null });
+  }
+  res.json({ success: true, data: summary });
+});
+
 const server = app.listen(PORT, '0.0.0.0', () => {
+  perf.markStartupPhase('serverReady');
+  const startupReport = perf.getStartupReport();
   console.log(`[DASHBOARD] Server running on port ${PORT} (${IS_PROD ? 'production' : 'development'})`);
+  if (startupReport.serverReady) {
+    console.log(`[STARTUP] Total startup: ${startupReport.serverReady.sinceStart}ms`);
+    console.log(`[STARTUP] Mongo connect: ${startupReport['mongodb-connect']?.sincePrevious || 'N/A'}ms`);
+  }
 });
 
 let shuttingDown = false;

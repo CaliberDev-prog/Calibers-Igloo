@@ -14,14 +14,18 @@ import {
   handleCloseRequestModal,
 } from '../components/buttons/ticket/index.js';
 import { logError } from '../services/ticketLoggingService.js';
+import { perf } from '../utils/performance.js';
 
 export async function handleInteraction(interaction, commands) {
   if (interaction.isChatInputCommand()) {
     const command = commands.get(interaction.commandName);
     if (!command) return;
+    const endTimer = perf.startTimer('command', interaction.commandName);
     try {
       await command.execute(interaction);
+      endTimer({ success: true });
     } catch (error) {
+      endTimer({ success: false });
       console.error(`[COMMAND] ${interaction.commandName}:`, error);
       await logError(interaction.guild, `Command: /${interaction.commandName}`, error, {
         userId: interaction.user.id,
