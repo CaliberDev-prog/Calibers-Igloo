@@ -1,32 +1,62 @@
-import { Reminder } from '../database/models/Reminder.js';
-import { isMongoConnected } from './mongodb.js';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = join(__dirname, '..', 'data');
+const FILE_PATH = join(DATA_DIR, 'reminders.json');
+
+function load() {
+  try {
+    if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+    if (!existsSync(FILE_PATH)) return [];
+    const raw = readFileSync(FILE_PATH, 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function save(reminders) {
+  if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+  writeFileSync(FILE_PATH, JSON.stringify(reminders, null, 2), 'utf-8');
+}
+
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
 
 export async function initReminderService(client) {
   const guild = client.guilds.cache.get(process.env.GUILD_ID);
   if (!guild) return;
 
   const check = async () => {
-    if (!isMongoConnected()) return;
     try {
-      const due = await Reminder.find({ active: true, cycleStart: { $lte: new Date(Date.now() - 60000) } });
-      for (const reminder of due) {
-        const channel = guild.channels.cache.get(reminder.channelId);
-        if (!channel) continue;
-        const elapsed = Date.now() - new Date(reminder.cycleStart).getTime();
+      const reminders = load();
+      const now = Date.now();
+      let changed = false;
+
+      for (const reminder of reminders) {
+        if (!reminder.active) continue;
+        const elapsed = now - new Date(reminder.cycleStart).getTime();
         const threshold = reminder.intervalMinutes * 60 * 1000;
         if (elapsed < threshold) continue;
+
+        const channel = guild.channels.cache.get(reminder.channelId);
+        if (!channel) continue;
 
         const user = guild.members.cache.get(reminder.userId) || await guild.members.fetch(reminder.userId).catch(() => null);
         if (!user) continue;
 
         const msg = await channel.send(`<@${reminder.userId}> ${reminder.message}`).catch(() => null);
         if (msg) {
-          await Reminder.updateOne(
-            { _id: reminder._id },
-            { $set: { lastPingedAt: new Date() }, $inc: { totalPingsSent: 1 } }
-          );
+          reminder.lastPingedAt = new Date().toISOString();
+          reminder.totalPingsSent = (reminder.totalPingsSent || 0) + 1;
+          changed = true;
         }
       }
+
+      if (changed) save(reminders);
     } catch (err) {
       console.error('[REMINDER] Check failed:', err.message);
     }
@@ -41,11 +71,21 @@ export async function initReminderService(client) {
 export async function handleReminderMessage(message) {
   if (message.author.bot) return;
   try {
-    const affected = await Reminder.updateMany(
-      { channelId: message.channel.id, userId: message.author.id, active: true },
-      { $set: { cycleStart: new Date(), lastResponseAt: new Date() }, $inc: { totalResponses: 1 } }
-    );
-    if (affected.modifiedCount > 0) {
+    const reminders = load();
+    let changed = false;
+
+    for (const r of reminders) {
+      if (!r.active) continue;
+      if (r.channelId === message.channel.id && r.userId === message.author.id) {
+        r.cycleStart = new Date().toISOString();
+        r.lastResponseAt = new Date().toISOString();
+        r.totalResponses = (r.totalResponses || 0) + 1;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      save(reminders);
       console.log(`[REMINDER] Response detected: ${message.author.tag} in #${message.channel.name}`);
     }
   } catch (err) {
@@ -53,63 +93,60 @@ export async function handleReminderMessage(message) {
   }
 }
 
-const RETRYABLE_CODES = new Set([10107, 13435, 13436, 11600, 11602]);
-
-async function withRetry(fn, maxRetries = 3, delay = 1000) {
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await fn();
-    } catch (err) {
-      if (i === maxRetries - 1) throw err;
-      if (err.code && RETRYABLE_CODES.has(err.code)) {
-        console.log(`[MONGO] Retryable error (${err.codeName}), attempt ${i + 2}/${maxRetries}...`);
-        await new Promise((r) => setTimeout(r, delay * (i + 1)));
-      } else {
-        throw err;
-      }
-    }
-  }
-}
-
 export async function createReminder({ userId, channelId, guildId, message, intervalMinutes, createdBy }) {
-  const reminder = await withRetry(() =>
-    Reminder.create({
-      userId,
-      channelId,
-      guildId,
-      message: message || 'Time for your reminder!',
-      intervalMinutes: Math.max(1, Math.min(1440, intervalMinutes || 5)),
-      createdBy,
-      cycleStart: new Date(),
-    })
-  );
+  const reminders = load();
+  const reminder = {
+    _id: generateId(),
+    userId,
+    channelId,
+    guildId,
+    message: message || 'Time for your reminder!',
+    intervalMinutes: Math.max(1, Math.min(1440, intervalMinutes || 5)),
+    active: true,
+    createdBy,
+    lastPingedAt: null,
+    lastResponseAt: null,
+    cycleStart: new Date().toISOString(),
+    totalPingsSent: 0,
+    totalResponses: 0,
+    createdAt: new Date().toISOString(),
+  };
+  reminders.push(reminder);
+  save(reminders);
   return reminder;
 }
 
 export async function deleteReminder(reminderId) {
-  const reminder = await Reminder.findByIdAndDelete(reminderId);
-  return reminder;
+  const reminders = load();
+  const idx = reminders.findIndex((r) => r._id === reminderId);
+  if (idx === -1) return null;
+  const [removed] = reminders.splice(idx, 1);
+  save(reminders);
+  return removed;
 }
 
 export async function listReminders(guildId) {
-  const reminders = await Reminder.find({ guildId }).sort({ createdAt: -1 }).lean();
-  return reminders;
+  const reminders = load();
+  return reminders
+    .filter((r) => r.guildId === guildId)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 export async function pauseReminder(reminderId) {
-  const reminder = await Reminder.findByIdAndUpdate(
-    reminderId,
-    { $set: { active: false } },
-    { new: true }
-  );
+  const reminders = load();
+  const reminder = reminders.find((r) => r._id === reminderId);
+  if (!reminder) return null;
+  reminder.active = false;
+  save(reminders);
   return reminder;
 }
 
 export async function resumeReminder(reminderId) {
-  const reminder = await Reminder.findByIdAndUpdate(
-    reminderId,
-    { $set: { active: true, cycleStart: new Date() } },
-    { new: true }
-  );
+  const reminders = load();
+  const reminder = reminders.find((r) => r._id === reminderId);
+  if (!reminder) return null;
+  reminder.active = true;
+  reminder.cycleStart = new Date().toISOString();
+  save(reminders);
   return reminder;
 }
