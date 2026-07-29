@@ -51,6 +51,7 @@ export async function initReminderService(client) {
         const msg = await channel.send(`<@${reminder.userId}> ${reminder.message}`).catch(() => null);
         if (msg) {
           reminder.lastPingedAt = new Date().toISOString();
+          reminder.cycleStart = new Date().toISOString();
           reminder.totalPingsSent = (reminder.totalPingsSent || 0) + 1;
           changed = true;
         }
