@@ -8,12 +8,14 @@ import {
 
 import * as setupCommand from './commands/setup.js';
 import * as pingCommand from './commands/ping.js';
+import * as clearbotCommand from './commands/clearbot.js';
 import { handleInteraction } from './events/interactionCreate.js';
 import { handleRolesFix } from './commands/rolesfix.js';
 import { handleRules } from './commands/rules.js';
 import { commands as ticketSlashCommands } from './commands/tickets/ticket.js';
 import { commands as panelSlashCommands } from './commands/slash/panels.js';
 import { commands as modSlashCommands } from './commands/slash/moderation.js';
+import { commands as reminderSlashCommands } from './commands/slash/reminder.js';
 import { handleMemberAdd } from './events/guildMemberAdd.js';
 import { handleInviteTracking } from './services/inviteTrackingService.js';
 import {
@@ -30,6 +32,7 @@ import { getPrefix } from './services/prefixService.js';
 import { registerMessageLogging } from './services/messageLoggingService.js';
 import { handlePurgeCommand, handleWarningCommand, handleSlowmodeCommand } from './commands/prefix/moderation.js';
 import * as staffaddCommand from './commands/staffadd.js';
+import { initReminderService, handleReminderMessage } from './services/reminderService.js';
 
 if (!process.env.DISCORD_TOKEN) {
   throw new Error('Missing DISCORD_TOKEN in .env');
@@ -69,10 +72,15 @@ for (const cmd of panelSlashCommands) {
 for (const cmd of modSlashCommands) {
   client.commands.set(cmd.data.name, cmd);
 }
+for (const cmd of reminderSlashCommands) {
+  client.commands.set(cmd.data.name, cmd);
+}
+client.commands.set(clearbotCommand.data.name, clearbotCommand);
 client.commands.set(staffaddCommand.data.name, staffaddCommand);
 
 let autoCloseInterval = null;
 let giveawayInterval = null;
+let reminderInterval = null;
 
 client.once(Events.ClientReady, async (readyClient) => {
   console.log(`[STARTUP] Logged in as ${readyClient.user.tag}`);
@@ -108,6 +116,8 @@ client.once(Events.ClientReady, async (readyClient) => {
         });
       }, 60 * 1000);
       checkGiveawayEnd(readyClient).catch(() => null);
+
+      reminderInterval = await initReminderService(readyClient);
     } else {
       console.warn('[STARTUP] MongoDB not connected. Recovery, invites, and auto-close skipped.');
     }
@@ -127,6 +137,8 @@ client.on(Events.MessageCreate, async (message) => {
   if (message.channel.parentId && ticketCategories.includes(message.channel.parentId)) {
     recordMessage(message).catch(() => null);
   }
+
+  handleReminderMessage(message).catch(() => null);
 
   const prefix = getPrefix();
   const botMention = `<@${client.user.id}>`;
@@ -180,6 +192,7 @@ function shutdown(signal) {
   console.log(`[SHUTDOWN] Received ${signal}. Shutting down gracefully...`);
   if (autoCloseInterval) clearInterval(autoCloseInterval);
   if (giveawayInterval) clearInterval(giveawayInterval);
+  if (reminderInterval) clearInterval(reminderInterval);
   client.destroy().catch(() => null);
   import('mongoose').then((mongoose) => {
     mongoose.default.disconnect().then(() => {
