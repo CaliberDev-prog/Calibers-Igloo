@@ -8,7 +8,6 @@ import {
 
 import * as setupCommand from './commands/setup.js';
 import * as pingCommand from './commands/ping.js';
-import * as clearbotCommand from './commands/clearbot.js';
 import { handleInteraction } from './events/interactionCreate.js';
 import { handleRolesFix } from './commands/rolesfix.js';
 import { handleRules } from './commands/rules.js';
@@ -75,7 +74,6 @@ for (const cmd of modSlashCommands) {
 for (const cmd of reminderSlashCommands) {
   client.commands.set(cmd.data.name, cmd);
 }
-client.commands.set(clearbotCommand.data.name, clearbotCommand);
 client.commands.set(staffaddCommand.data.name, staffaddCommand);
 
 let autoCloseInterval = null;

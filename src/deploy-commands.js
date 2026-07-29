@@ -2,7 +2,6 @@ import 'dotenv/config';
 import { REST, Routes } from 'discord.js';
 import { data as setup } from './commands/setup.js';
 import { data as ping } from './commands/ping.js';
-import { data as clearbot } from './commands/clearbot.js';
 import { commands as ticketCommands } from './commands/tickets/ticket.js';
 import { commands as panelCommands } from './commands/slash/panels.js';
 import { commands as modCommands } from './commands/slash/moderation.js';
@@ -17,7 +16,6 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 const all = [
   setup.toJSON(),
   ping.toJSON(),
-  clearbot.toJSON(),
   staffadd.data.toJSON(),
   ...ticketCommands.map((c) => c.data.toJSON()),
   ...panelCommands.map((c) => c.data.toJSON()),
