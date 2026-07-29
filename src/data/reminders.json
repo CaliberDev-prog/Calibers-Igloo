@@ -1,0 +1,19 @@
+[
+  {
+    "_id": "ms5jmn7mx3b39q",
+    "userId": "1048602893302898688",
+    "channelId": "1531863502057373806",
+    "guildId": "1529106613691088946",
+    "message": "WAKE UP STINKYYYYYYYY",
+    "intervalMinutes": 5,
+    "active": false,
+    "createdBy": "1293164546005012512",
+    "lastPingedAt": "2026-07-29T11:16:23.074Z",
+    "lastResponseAt": "2026-07-29T11:16:26.835Z",
+    "cycleStart": "2026-07-29T11:16:26.835Z",
+    "totalPingsSent": 154,
+    "totalResponses": 88,
+    "createdAt": "2026-07-29T03:46:55.618Z",
+    "spamActive": false
+  }
+]

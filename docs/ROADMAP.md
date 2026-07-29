@@ -56,6 +56,7 @@ Stop scope creep. New improvements discovered during implementation should be re
 | 8 | Error Handling and Observability | Pending | Failures are safe, diagnosable, and recoverable. |
 | 9 | Design System Adoption | Pending | No unjustified one-off UI patterns remain. |
 | 10 | Production Readiness | Pending | Deployment, monitoring, recovery, and final QA approved. |
+| 11 | Gambling System | Planned | Full virtual economy with 20+ games. See section 17. |
 
 ## 4. Batch 1 - Security Criticals (Complete)
 
@@ -225,13 +226,13 @@ This is a mandatory cross-batch feature. Its architecture begins in Batch 2, rel
 - Failure, rate-limit, partial-cache, and high-volume tests pass.
 - Operational documentation explains configuration, retention, storage impact, and troubleshooting.
 
-## 7-14. Batch Summaries
+## 7-14. Batches 3-10
 
-See BATCH_1_TRACKING.md for completed batch details. Remaining batches follow the same structure as outlined in sections 7-14 of this roadmap.
+See the per-batch tracking files and issue milestones for details. Batches 3 through 10 follow the standard structure: acceptance criteria, implementation plan, domain changes, and evidence requirements. They are not expanded here to avoid duplication with GitHub issue descriptions.
 
 ## 15. v1.0 Final Release Gate
 
-- All ten batch milestones are closed with evidence.
+- Batches 1-10 are closed with evidence.
 - No open critical or high-severity security vulnerabilities.
 - All automated checks pass on the release commit.
 - Production build and database migrations verified.
@@ -256,3 +257,76 @@ Use this structure for every completed issue:
 7. Security, privacy, accessibility, and performance considerations.
 8. Known limitations or follow-up issues.
 9. Confirmation that acceptance criteria and Definition of Done were met.
+
+---
+
+## 17. Batch 11 — Gambling System (Post-v1.0)
+
+A complete virtual currency gambling system for entertainment only. No real money, cryptocurrency, or items with real-world value. All games use the bot's virtual economy.
+
+### 17.1 Design Document
+
+See `docs/design/GAMBLING_SYSTEM.md` for the full game specifications, including all 20+ games, fairness requirements, security rules, and UX guidelines.
+
+### 17.2 Dependency-Ordered Phases
+
+| Phase | Focus | Description | Dependencies |
+|-------|-------|-------------|--------------|
+| 1 | Economy Foundation | Virtual currency system (coins/chips), balance management, atomic deposits/withdrawals, transaction history, starting balance, anti-exploit, cooldowns. `/balance`, `/pay`, `/leaderboard` commands. Economy service layer and database models. | None |
+| 2 | Game Engine & Security | Shared game framework: secure randomness, input validation, bet resolution, payout calculation, interaction lifecycle (buttons, timeouts, cleanup). Race condition prevention, double-payout protection, overflow safety. Standard embed templates. | Phase 1 |
+| 3 | Simple Games | Coin Flip, Dice, Slots, High-Low. Single-player, minimal UI, rapid development. Establish the game registration pattern so future games self-register. | Phase 2 |
+| 4 | Interactive Games | Blackjack, Mines, Towers, Plinko. Multi-step interactions, buttons, stage management, animations, cash-out flows. | Phase 3 |
+| 5 | Multiplayer & Jackpot | Texas Hold'em, War, Baccarat, Jackpot. Player rotation, dealer logic, hand evaluation, pool management, winner selection. | Phase 4 |
+| 6 | Achievements & Leaderboards | Statistics tracking, achievement definitions, leaderboard computation, daily/weekly rewards, gambling XP and levels, player profiles. | Phase 1-5 |
+| 7 | Admin Config & Polish | Admin configuration panel (enabled games, min/max bets, cooldowns, multipliers, house edge, jackpot limits). Balance tuning, edge-case hardening, performance optimization, full test suite, production readiness sign-off. | Phase 6 |
+
+### 17.3 Economy Foundation (Phase 1) Requirements
+
+Before any gambling game can exist, the shared economy must support:
+
+- **Virtual currency**: Configurable name (coins/chips/tokens), starting balance, min/max limits.
+- **User balance**: Per-user balance stored in MongoDB. Atomic increment/decrement via `findOneAndUpdate` with `$inc` to prevent race conditions.
+- **Transactions**: Immutable history log with type (bet, win, loss, daily, pay, admin), amount, balance snapshot, timestamp, and optional reference ID.
+- **Daily rewards**: Configurable amount, 24h cooldown, streak tracking, bonus for consecutive days.
+- **Payments**: `/pay @user amount` with validation, anti-fraud minimums, and transaction logging.
+- **Anti-exploit**: Negative balance prevention, maximum bet limits per config, cooldowns per game, rate limiting on balance-sensitive endpoints.
+
+### 17.4 Game Registration Pattern
+
+Each game module exports a standard interface:
+
+```js
+export const game = {
+  name: 'blackjack',
+  aliases: ['bj'],
+  minBet: 1,
+  maxBet: 10000,
+  cooldown: 0,
+  async execute(interaction, balance) { /* ... */ },
+};
+```
+
+A central game registry (`src/games/index.js`) auto-discovers modules in `src/games/` and registers slash commands, cooldowns, and statistics hooks. Adding a new game requires only creating a file in `src/games/` following the interface — no modifications to existing code.
+
+### 17.5 Security Rules
+
+- Every interaction validated server-side: bet amount, user identity, channel, cooldown state.
+- Balance operations use atomic MongoDB operations (`$inc`) — never read-modify-write.
+- Payouts calculated and applied server-side before any response is sent to the client.
+- Randomness uses `crypto.randomBytes` or `crypto.getRandomValues` — never `Math.random()`.
+- Interaction tokens and custom IDs validated against session state to prevent replay.
+- Daily rewards and cooldowns enforced via database timestamps, not in-memory state.
+- Rate limiting on all economy-sensitive commands (min 1s between deposits/withdrawals).
+
+### 17.6 Acceptance Criteria
+
+- All 20+ games functional and playable from Discord.
+- Balance never goes negative under any sequence of operations.
+- Concurrent requests for the same user do not produce incorrect balances.
+- Transaction history is complete and tamper-evident.
+- All statistical counters are accurate after any sequence of wins and losses.
+- Leaderboards update within configurable delay (default 60s).
+- Achievements unlock correctly and only once.
+- Admin configuration changes take effect without restart.
+- Full test suite passes: unit, integration, and scenario-based economy tests.
+- No regressions in existing bot functionality (337+ existing tests).
